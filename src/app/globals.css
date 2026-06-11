@@ -1,0 +1,79 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  background: #08172F;
+  color: #eef3ff;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text',
+    'Segoe UI', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer components {
+  .container-pp {
+    @apply mx-auto w-full max-w-[1180px] px-5;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-3
+      text-[15px] font-semibold text-white bg-cta-grad shadow-[0_8px_24px_-8px_rgba(46,123,255,0.7)]
+      hover:brightness-110 transition;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-3
+      text-[15px] font-semibold text-text border border-line2 bg-bg2/60
+      hover:border-accent hover:bg-bg3 transition;
+  }
+
+  .btn-tg {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-3
+      text-[15px] font-semibold text-white bg-green hover:bg-greenD transition;
+  }
+
+  .card {
+    @apply rounded-2xl bg-card border border-line p-5;
+  }
+
+  .input,
+  .select,
+  .textarea {
+    @apply w-full rounded-xl bg-bg2 border border-line2 px-4 py-3
+      text-text placeholder:text-muted3 focus:outline-none focus:border-accent;
+  }
+
+  .label {
+    @apply block text-[13px] text-muted mb-2 font-medium;
+  }
+
+  .eyebrow {
+    @apply inline-flex items-center text-[12px] font-semibold uppercase tracking-[0.12em] text-accent2;
+  }
+
+  .h-section {
+    @apply text-3xl md:text-4xl font-semibold tracking-tight text-text;
+  }
+
+  .sub {
+    @apply text-muted text-[15px] leading-relaxed;
+  }
+}
+
+/* Hide visually but stay readable for screen readers / SEO */
+.sr-only-pp {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
