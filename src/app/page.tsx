@@ -134,14 +134,15 @@ export default function HomePage() {
             быстро, безопасно, без автосписаний.
           </p>
         </div>
-        <div className="rounded-3xl overflow-hidden border border-line2 bg-bg2 aspect-[5/4] flex items-center justify-center">
-          <div className="text-center px-6">
-            <div className="text-7xl mb-4">💳</div>
-            <div className="text-text font-semibold text-lg">PlataPay</div>
-            <div className="text-muted text-sm">
-              платформа оплаты зарубежных сервисов
-            </div>
-          </div>
+        <div className="rounded-3xl overflow-hidden border border-line2 bg-bg2">
+          <img
+            src={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/about.webp`}
+            alt="PlataPay — платформа оплаты зарубежных сервисов"
+            width={900}
+            height={720}
+            className="w-full h-auto object-cover"
+            loading="lazy"
+          />
         </div>
       </section>
 

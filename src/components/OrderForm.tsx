@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { SITE } from '@/data/site';
+import { openWhatsApp, sendBackup } from '@/lib/submit';
 
 export function OrderForm() {
   const [sent, setSent] = useState(false);
@@ -9,18 +10,19 @@ export function OrderForm() {
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
-    const text = [
-      'Заявка с сайта PlataPay',
-      `Сервис: ${fd.get('service_select') || ''} ${fd.get('service_custom') || ''}`.trim(),
-      `Тариф: ${fd.get('plan_select') || ''} ${fd.get('plan_custom') || ''}`.trim(),
-      `Сумма: ${fd.get('amount') || ''} ${fd.get('currency') || ''}`.trim(),
-      `Связь: ${fd.get('contact_type') || ''} — ${fd.get('contact') || ''}`,
-      `Имя: ${fd.get('name') || ''}`,
-      `Телефон: ${fd.get('phone') || ''}`,
-      `Комментарий: ${fd.get('note') || ''}`,
-    ].join('\n');
-    const url = `${SITE.whatsapp}?text=${encodeURIComponent(text)}`;
-    window.open(url, '_blank');
+    const fields = {
+      Сервис: `${fd.get('service_select') || ''} ${fd.get('service_custom') || ''}`.trim(),
+      Тариф: `${fd.get('plan_select') || ''} ${fd.get('plan_custom') || ''}`.trim(),
+      Сумма: `${fd.get('amount') || ''} ${fd.get('currency') || ''}`.trim(),
+      Связь: `${fd.get('contact_type') || ''} — ${fd.get('contact') || ''}`,
+      Имя: String(fd.get('name') || ''),
+      Телефон: String(fd.get('phone') || ''),
+      Комментарий: String(fd.get('note') || ''),
+    };
+    const text = ['Заявка с сайта PlataPay', ...Object.entries(fields).map(([k, v]) => `${k}: ${v}`)].join('\n');
+    sendBackup('Заявка на оплату — PlataPay', fields);
+    openWhatsApp(text);
+    if (window.ym) window.ym(109522965, 'reachGoal', 'order_form');
     setSent(true);
   };
 

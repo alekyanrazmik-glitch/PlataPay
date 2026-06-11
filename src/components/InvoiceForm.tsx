@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { SITE } from '@/data/site';
+import { openWhatsApp, sendBackup } from '@/lib/submit';
 
 export function InvoiceForm() {
   const [sent, setSent] = useState(false);
@@ -9,21 +10,25 @@ export function InvoiceForm() {
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
+    const fields = {
+      Имя: String(fd.get('name') || ''),
+      Связь: `${fd.get('contact_type') || ''} — ${fd.get('contact') || ''}`,
+      Телефон: String(fd.get('phone') || ''),
+      Получатель: String(fd.get('payee') || ''),
+      Сумма: `${fd.get('amount') || ''} ${fd.get('currency') || ''}`,
+      Назначение: String(fd.get('purpose') || ''),
+      Реквизиты: String(fd.get('details') || ''),
+      Срок: String(fd.get('deadline') || ''),
+      Комментарий: String(fd.get('note') || ''),
+    };
     const text = [
       'Заявка на оплату инвойса',
-      `Имя: ${fd.get('name') || ''}`,
-      `Связь: ${fd.get('contact_type') || ''} — ${fd.get('contact') || ''}`,
-      `Телефон: ${fd.get('phone') || ''}`,
-      `Получатель: ${fd.get('payee') || ''}`,
-      `Сумма: ${fd.get('amount') || ''} ${fd.get('currency') || ''}`,
-      `Назначение: ${fd.get('purpose') || ''}`,
-      `Реквизиты: ${fd.get('details') || ''}`,
-      `Срок: ${fd.get('deadline') || ''}`,
-      `Комментарий: ${fd.get('note') || ''}`,
+      ...Object.entries(fields).map(([k, v]) => `${k}: ${v}`),
       'Инвойс приложите в WhatsApp/Telegram отдельным сообщением.',
     ].join('\n');
-    const url = `${SITE.whatsapp}?text=${encodeURIComponent(text)}`;
-    window.open(url, '_blank');
+    sendBackup('Заявка на инвойс — PlataPay', fields);
+    openWhatsApp(text);
+    if (window.ym) window.ym(109522965, 'reachGoal', 'invoice_form');
     setSent(true);
   };
 

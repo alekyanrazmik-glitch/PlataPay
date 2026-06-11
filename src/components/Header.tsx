@@ -17,11 +17,9 @@ export function Header() {
 
         <nav className="hidden md:flex items-center gap-1">
           {NAV.map((item) => {
+            const base = item.href.split('#')[0] || '/';
             const active =
-              item.href === '/'
-                ? pathname === '/'
-                : pathname.startsWith(item.href.split('#')[0]) &&
-                  item.href.split('#')[0] !== '/';
+              base === '/' ? pathname === '/' && !item.href.includes('#') : pathname === base || pathname.startsWith(base + '/');
             return (
               <Link
                 key={item.href}
