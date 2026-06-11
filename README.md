@@ -1,53 +1,51 @@
 # PlataPay
 
-Сайт PlataPay (payoplata.ru) на Next.js со статическим экспортом для GitHub Pages.
-
-## Стек
-
-- Next.js 15 (App Router) + React 19
-- TypeScript
-- Tailwind CSS
-- Статический экспорт (`output: 'export'`) → деплой на GitHub Pages
-
-## Локальная разработка
-
-```bash
-npm install
-npm run dev
-```
-
-Открыть http://localhost:3000
+Статический сайт PlataPay (payoplata.ru) для GitHub Pages — собирается
+из оригинального экспорта Тильды в `tilda-original/`.
 
 ## Сборка
 
 ```bash
-npm run build
+node build.mjs
 ```
 
-Результат в `out/`.
+Результат в `out/`. Никаких зависимостей не нужно — Node 20+ и всё.
+
+Базовый путь по умолчанию — `/PlataPay` (имя репозитория). Для
+кастомного домена передать пустую строку:
+
+```bash
+NEXT_PUBLIC_BASE_PATH= node build.mjs
+```
 
 ## Структура
 
-- `src/app/` — страницы (App Router): `/`, `/catalog`, `/faq`, `/contacts`
-- `src/components/` — UI-компоненты (Header, Footer, Modals, формы)
-- `src/data/` — данные: каталог сервисов, FAQ, отзывы, контакты
-- `public/` — статика (favicon, robots)
-- `tilda-original/` — исходный экспорт из Тильды (референс)
-- `CONTENT.md` — извлечённый контент со старого сайта
+- `tilda-original/` — оригинальный экспорт из Тильды (источник правды)
+- `build.mjs` — скрипт сборки: раскладывает ассеты в `css/`/`js/`/`images/`,
+  делает чистые URL (`/`, `/catalog`, `/faq`, `/contacts`),
+  патчит навигацию и `<base href>` под GitHub Pages
+- `.github/workflows/pages.yml` — деплой на GitHub Pages при пуше в `main`
+- `CONTENT.md` — извлечённый контент со старого сайта (для справки)
 
 ## Деплой
 
-Автодеплой на GitHub Pages через `.github/workflows/deploy.yml`
-при пуше в `main`. Базовый путь — `/PlataPay` (имя репозитория).
+Автодеплой через GitHub Actions при пуше в `main`. После первого
+прогона включить Pages в репо: **Settings → Pages → Source: GitHub Actions**.
+
+Сайт публикуется по адресу:
+`https://alekyanrazmik-glitch.github.io/PlataPay/`
 
 ## Формы
 
-Формы заказа и инвойса открывают WhatsApp с подготовленным текстом.
-Для интеграции с собственным backend — поменять `onSubmit` в
-`src/components/OrderForm.tsx` и `InvoiceForm.tsx`.
+Формы заказа и инвойса отправляют данные в Telegram-бот и в Google
+Sheets — токен бота, chat_id и URL Apps Script зашиты в HTML
+страниц в `tilda-original/page*.html`. Чтобы поменять — найти
+переменные `BOT_TOKEN`, `CHAT_ID`, `SHEETS_URL` и заменить во всех
+четырёх страницах.
 
-## Контент
+## Редактирование контента
 
-Каталог сервисов, FAQ и отзывы хранятся как TypeScript-объекты
-в `src/data/`. Чтобы добавить/убрать сервис — отредактировать
-`src/data/services.ts`.
+Контент (тексты, каталог, FAQ, отзывы) находится в HTML-файлах
+`tilda-original/page142115676.html` (главная), `page143711326.html`
+(каталог), `page144727686.html` (FAQ), `page144877396.html`
+(контакты). После правки — `node build.mjs` и пуш в `main`.
