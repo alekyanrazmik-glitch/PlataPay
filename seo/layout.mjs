@@ -91,11 +91,29 @@ ${verifyTags}
   footer.site .row{max-width:1180px;margin:0 auto;padding:28px 24px;display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;color:#8499c0;font-size:13px;}
   footer.site a{color:#8499c0;margin-left:16px;}
   footer.site a:hover{color:#eef3ff;}
+  /* mini order form */
+  .order{background:linear-gradient(180deg,#0c1f40,#13294e);border:1px solid #1d3a6b;border-radius:18px;padding:24px;margin:24px 0;}
+  .order h2{margin-bottom:6px;}
+  .order .sub{color:#9fb2d4;font-size:14px;margin-bottom:18px;}
+  .order .row{display:grid;gap:10px;grid-template-columns:1fr 1fr auto;align-items:end;}
+  .order label{display:block;font-size:12px;color:#9fb2d4;margin-bottom:6px;}
+  .order select,.order input{width:100%;background:#08172F;border:1px solid #1d3a6b;color:#eef3ff;border-radius:10px;padding:12px 14px;font-size:15px;font-family:inherit;}
+  .order select:focus,.order input:focus{outline:none;border-color:#2e7bff;}
+  .order button{background:linear-gradient(180deg,#2e7bff,#1e5fd6);color:#fff;border:none;border-radius:10px;padding:13px 22px;font-weight:600;font-size:15px;cursor:pointer;font-family:inherit;white-space:nowrap;}
+  .order button:hover{filter:brightness(1.08);}
+  .order button:disabled{opacity:.6;cursor:wait;}
+  .order .alt{margin-top:14px;font-size:13px;color:#8499c0;}
+  .order .alt a{color:#2e7bff;}
+  .order .err{color:#ff8d8d;margin-top:10px;font-size:13px;}
+  .order .ok{background:#0c1f40;border:1px solid #15A34A;border-radius:14px;padding:24px;text-align:center;}
+  .order .ok h3{color:#22C55E;margin-bottom:8px;}
+  .order .ok p{color:#cfd9ef;margin:0;}
   @media (max-width:640px){
     h1{font-size:28px;}
     h2{font-size:19px;}
     nav.top{display:none;}
     .block{padding:18px;}
+    .order .row{grid-template-columns:1fr;}
   }
 </style>
 ${faqLd}
@@ -110,6 +128,62 @@ ${faqLd}
 </script>
 <noscript><div><img src="https://mc.yandex.ru/watch/109522965" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
 <!-- /Yandex.Metrika counter -->
+<script>
+  // Mini order form: posts to the same Telegram bot + Google Sheets
+  // that the main Tilda forms use. Both requests are fire-and-forget;
+  // the user sees a success screen as long as at least one succeeds.
+  window.ppSubmit = function(ev){
+    ev.preventDefault();
+    var form = ev.target;
+    var card = form.closest('.order');
+    var tier = form.querySelector('#pp-tier').value || '';
+    var contact = form.querySelector('#pp-contact').value.trim();
+    var err = card.querySelector('#pp-err');
+    var btn = form.querySelector('#pp-submit');
+    err.hidden = true;
+    if (contact.length < 4) { err.textContent='Введите контакт (телефон, @username или email)'; err.hidden=false; return false; }
+    btn.disabled = true; btn.textContent = 'Отправляем…';
+
+    var service = card.dataset.service;
+    var intent = card.dataset.intent;
+    var page = location.pathname;
+    var msg = [
+      'Заявка с SEO-страницы PlataPay',
+      'Сервис: ' + service,
+      'Тариф: ' + (tier || '—'),
+      'Контакт: ' + contact,
+      'Страница: https://payoplata.ru' + page,
+      'Интент: ' + intent,
+    ].join('\\n');
+
+    var BOT='8842294846:AAEYOKRa-M80_fnZGu1Qk_fbmB7fknIR8UE';
+    var CHAT='523060537';
+    var SHEETS='https://script.google.com/macros/s/AKfycbyy43Ff5kKivrUsaXWEkda7JXNwHrOI-3BJIJp3UG9H8K6cb4DxjpC8eXNPGNEXQEWt/exec';
+
+    var tg = fetch('https://api.telegram.org/bot'+BOT+'/sendMessage', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({chat_id:CHAT, text:msg, parse_mode:'HTML', disable_web_page_preview:true})
+    }).then(function(r){return r.ok;}).catch(function(){return false;});
+
+    var sheet = fetch(SHEETS, {
+      method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({source:'seo', page:page, service:service, intent:intent, tier:tier, contact:contact, ts:Date.now()})
+    }).then(function(){return true;}).catch(function(){return false;});
+
+    Promise.all([tg, sheet]).then(function(res){
+      if (res[0] || res[1]) {
+        card.innerHTML = '<div class="ok"><h3>Заявка принята</h3><p>Свяжемся в течение 5–15 минут по указанному контакту. Если срочно — напишите в Telegram: <a href="https://t.me/Kimzar_A" target="_blank" rel="noopener">@Kimzar_A</a>.</p></div>';
+        if (window.ym) window.ym(109522965, 'reachGoal', 'seo_order');
+      } else {
+        err.textContent = 'Не удалось отправить. Напишите нам в Telegram: @Kimzar_A';
+        err.hidden = false;
+        btn.disabled = false;
+        btn.textContent = 'Оплатить';
+      }
+    });
+    return false;
+  };
+</script>
 </head>
 <body>
 <header class="site">
@@ -134,6 +208,35 @@ ${faqLd}
   </div>
 
   ${page.body}
+
+  <section class="order" id="zakaz" data-service="${escapeAttr(service.name)}" data-intent="${intent.key}">
+    <h2>Оплатить ${service.name}</h2>
+    <p class="sub">Оставьте контакт — ответим в течение 5–15 минут и подтвердим сумму.</p>
+    <form class="row" onsubmit="return ppSubmit(event)">
+      <div>
+        <label for="pp-tier">Тариф</label>
+        <select id="pp-tier" name="tier">
+          ${
+            (service.tiers || []).length
+              ? `<option value="">Любой / уточнить</option>` +
+                service.tiers.map((t) => `<option>${escapeAttr(t)}</option>`).join('')
+              : `<option value="">Уточним при ответе</option>`
+          }
+        </select>
+      </div>
+      <div>
+        <label for="pp-contact">Телефон, Telegram или email</label>
+        <input id="pp-contact" name="contact" type="text" inputmode="text" placeholder="+7 999 123-45-67 или @username" required autocomplete="off">
+      </div>
+      <button type="submit" id="pp-submit">Оплатить</button>
+    </form>
+    <div class="alt">
+      Или сразу напишите:
+      <a href="https://t.me/Kimzar_A?text=${encodeURIComponent('Привет! Хочу оплатить ' + service.name)}" target="_blank" rel="noopener">Telegram</a> ·
+      <a href="https://wa.me/79676726909?text=${encodeURIComponent('Привет! Хочу оплатить ' + service.name)}" target="_blank" rel="noopener">WhatsApp</a>
+    </div>
+    <div class="err" id="pp-err" hidden></div>
+  </section>
 
   <section class="faq">
     <h2 style="padding-left:4px;">Частые вопросы</h2>
