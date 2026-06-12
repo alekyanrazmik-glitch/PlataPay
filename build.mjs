@@ -144,6 +144,14 @@ function patchPage(html, isHome) {
   html = html.replace(/<base\s+href="[^"]*"\s*\/?>/gi, '');
   html = html.replace(/<head([^>]*)>/i, `<head$1><base href="${BASE_HREF}">`);
 
+  // 3) Drop the Tilda branding badge ("Made on Tilda") that's hardcoded
+  //    in the export.
+  html = html.replace(
+    /<!--\s*Tilda copyright[^>]*-->\s*<div class="t-tildalabel[\s\S]*?<\/div>\s*<\/div>/i,
+    '',
+  );
+  html = html.replace(/<div class="t-tildalabel[\s\S]*?<\/a>\s*<\/div>/gi, '');
+
   return html;
 }
 
