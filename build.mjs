@@ -18,6 +18,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { buildEnhancement } from './seo/enhance.mjs';
 
 const SRC = 'tilda-original';
 const OUT = 'out';
@@ -30,6 +31,8 @@ const BASE_HREF = BASE === '' ? '/' : BASE.endsWith('/') ? BASE : BASE + '/';
 // changes.
 export const YANDEX_VERIFY = process.env.YANDEX_VERIFY || 'faaec45fb982b403';
 export const GOOGLE_VERIFY = process.env.GOOGLE_VERIFY || '';
+
+const enhanceInject = buildEnhancement(BASE_HREF);
 
 function verifyTags() {
   let s = '';
@@ -169,6 +172,9 @@ function patchPage(html, isHome) {
     '',
   );
   html = html.replace(/<div class="t-tildalabel[\s\S]*?<\/a>\s*<\/div>/gi, '');
+
+  // 4) Inject our mini order form + search autocomplete just before </body>.
+  html = html.replace('</body>', `${enhanceInject}</body>`);
 
   return html;
 }
