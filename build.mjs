@@ -164,5 +164,93 @@ for (const { src, dest, isHome } of PAGES) {
   console.log(`built ${dest}`);
 }
 
+// ---------------- SEO landing pages ----------------
+const { SERVICES: SEO_SERVICES, INTENTS } = await import('./seo/data.mjs');
+const { RENDERERS } = await import('./seo/templates.mjs');
+const { renderPage } = await import('./seo/layout.mjs');
+
+const seoUrls = [];
+let seoCount = 0;
+for (const service of SEO_SERVICES) {
+  for (const intent of INTENTS) {
+    const page = RENDERERS[intent.key](service, INTENTS);
+    const html = renderPage({ base: BASE_HREF, page, service, intent, intents: INTENTS });
+    const slug = intent.slug(service.slug);
+    const dir = path.join(OUT, slug);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'index.html'), html);
+    seoUrls.push(`https://payoplata.ru/${slug}/`);
+    seoCount++;
+  }
+}
+console.log(`built ${seoCount} SEO pages`);
+
+// Hub index of SEO pages, grouped by service. Helps crawlers find
+// every landing and serves as an internal-linking spine.
+const grouped = {};
+for (const s of SEO_SERVICES) {
+  (grouped[s.cat] ||= []).push(s);
+}
+const hub = `<!doctype html>
+<html lang="ru"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<base href="${BASE_HREF}">
+<title>Все сервисы PlataPay — оплата подписок из России</title>
+<meta name="description" content="Полный список зарубежных сервисов, которые мы оплачиваем из России: оплата, инструкции, тарифы и подписки.">
+<link rel="canonical" href="https://payoplata.ru/seo/">
+<style>
+  :root{color-scheme:dark;}
+  body{margin:0;background:#08172F;color:#eef3ff;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',system-ui,sans-serif;}
+  .wrap{max-width:1080px;margin:0 auto;padding:32px 24px;}
+  h1{font-size:34px;font-weight:600;letter-spacing:-.02em;margin:0 0 12px;}
+  .sub{color:#9fb2d4;margin-bottom:32px;}
+  h2{font-size:20px;margin:32px 0 12px;color:#7BAEFF;}
+  .svc{background:#0c1f40;border:1px solid #16315f;border-radius:14px;padding:14px 16px;margin-bottom:10px;}
+  .svc h3{margin:0 0 8px;font-size:16px;}
+  .svc a{display:inline-block;margin:0 12px 4px 0;font-size:13px;color:#cfd9ef;}
+  .svc a:hover{color:#2e7bff;}
+  a{color:#7BAEFF;text-decoration:none;}
+  a.home{display:inline-block;margin-bottom:16px;color:#9fb2d4;font-size:14px;}
+</style>
+</head><body>
+<div class="wrap">
+<a class="home" href="${BASE_HREF}">← На главную</a>
+<h1>Все сервисы и материалы</h1>
+<p class="sub">${SEO_SERVICES.length} сервисов × ${INTENTS.length} материалов = ${seoCount} страниц. Выберите сервис и тип материала.</p>
+${Object.entries(grouped).map(([cat, list]) => `
+  <h2>${cat}</h2>
+  ${list.map((s) => `
+    <div class="svc">
+      <h3>${s.name}</h3>
+      ${INTENTS.map((i) => `<a href="${BASE_HREF}${i.slug(s.slug)}/">${i.title} ${s.name}</a>`).join('')}
+    </div>
+  `).join('')}
+`).join('')}
+</div>
+</body></html>`;
+fs.mkdirSync(path.join(OUT, 'seo'), { recursive: true });
+fs.writeFileSync(path.join(OUT, 'seo', 'index.html'), hub);
+seoUrls.push('https://payoplata.ru/seo/');
+
+// Rewrite sitemap.xml so search engines actually find the new pages.
+const baseUrls = [
+  'https://payoplata.ru/',
+  'https://payoplata.ru/catalog/',
+  'https://payoplata.ru/faq/',
+  'https://payoplata.ru/contacts/',
+];
+const today = new Date().toISOString().slice(0, 10);
+const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${[...baseUrls, ...seoUrls]
+  .map(
+    (u) => `<url><loc>${u}</loc><lastmod>${today}</lastmod><changefreq>weekly</changefreq><priority>${u === 'https://payoplata.ru/' ? '1.0' : '0.6'}</priority></url>`,
+  )
+  .join('\n')}
+</urlset>
+`;
+fs.writeFileSync(path.join(OUT, 'sitemap.xml'), sitemap);
+console.log(`sitemap.xml: ${baseUrls.length + seoUrls.length} urls`);
+
 console.log(`\nDone. base href = ${BASE_HREF}`);
 console.log('Output ready in ./out');
