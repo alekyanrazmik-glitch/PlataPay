@@ -25,6 +25,19 @@ const RAW_BASE = process.env.NEXT_PUBLIC_BASE_PATH;
 const BASE = RAW_BASE === undefined ? '/PlataPay' : RAW_BASE;
 const BASE_HREF = BASE === '' ? '/' : BASE.endsWith('/') ? BASE : BASE + '/';
 
+// Search engine site-ownership verification codes. Empty string ->
+// the meta tag is skipped. Override via env to rotate without code
+// changes.
+export const YANDEX_VERIFY = process.env.YANDEX_VERIFY || 'faaec45fb982b403';
+export const GOOGLE_VERIFY = process.env.GOOGLE_VERIFY || '';
+
+function verifyTags() {
+  let s = '';
+  if (YANDEX_VERIFY) s += `<meta name="yandex-verification" content="${YANDEX_VERIFY}">`;
+  if (GOOGLE_VERIFY) s += `<meta name="google-site-verification" content="${GOOGLE_VERIFY}">`;
+  return s;
+}
+
 const PAGES = [
   { src: 'page142115676.html', dest: 'index.html', isHome: true },
   { src: 'page143711326.html', dest: 'catalog/index.html' },
@@ -90,6 +103,7 @@ fs.writeFileSync(
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>404 — PlataPay</title>
+${verifyTags()}
 <link rel="icon" href="${BASE_HREF}favicon.svg" type="image/svg+xml">
 <style>
   :root { color-scheme: dark; }
@@ -140,9 +154,13 @@ function patchPage(html, isHome) {
 
   // 2) base href so relative asset paths (css/, js/, images/) resolve
   //    correctly from any depth and under any GitHub Pages basePath.
-  //    Strip any pre-existing Tilda <base href="./"> first.
+  //    Strip any pre-existing Tilda <base href="./"> first. Also inject
+  //    site-verification meta tags here so every Tilda page carries them.
   html = html.replace(/<base\s+href="[^"]*"\s*\/?>/gi, '');
-  html = html.replace(/<head([^>]*)>/i, `<head$1><base href="${BASE_HREF}">`);
+  html = html.replace(
+    /<head([^>]*)>/i,
+    `<head$1><base href="${BASE_HREF}">${verifyTags()}`,
+  );
 
   // 3) Drop the Tilda branding badge ("Made on Tilda") that's hardcoded
   //    in the export.
@@ -174,7 +192,7 @@ let seoCount = 0;
 for (const service of SEO_SERVICES) {
   for (const intent of INTENTS) {
     const page = RENDERERS[intent.key](service, INTENTS);
-    const html = renderPage({ base: BASE_HREF, page, service, intent, intents: INTENTS });
+    const html = renderPage({ base: BASE_HREF, page, service, intent, intents: INTENTS, verifyTags: verifyTags() });
     const slug = intent.slug(service.slug);
     const dir = path.join(OUT, slug);
     fs.mkdirSync(dir, { recursive: true });
@@ -198,6 +216,7 @@ const hub = `<!doctype html>
 <title>Все сервисы PlataPay — оплата подписок из России</title>
 <meta name="description" content="Полный список зарубежных сервисов, которые мы оплачиваем из России: оплата, инструкции, тарифы и подписки.">
 <link rel="canonical" href="https://payoplata.ru/seo/">
+${verifyTags()}
 <style>
   :root{color-scheme:dark;}
   body{margin:0;background:#08172F;color:#eef3ff;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',system-ui,sans-serif;}

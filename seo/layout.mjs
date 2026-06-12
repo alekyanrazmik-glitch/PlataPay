@@ -10,6 +10,7 @@ export function renderPage({
   service,
   intent,
   intents,
+  verifyTags = '',
 }) {
   const canonical = `https://payoplata.ru/${intent.slug(service.slug)}/`;
   const faqLd = page.faq && page.faq.length
@@ -40,6 +41,7 @@ export function renderPage({
 <meta property="og:title" content="${escapeAttr(page.title)}">
 <meta property="og:description" content="${escapeAttr(page.description)}">
 <meta property="og:url" content="${canonical}">
+${verifyTags}
 <style>
   :root { color-scheme: dark; }
   *,*::before,*::after{box-sizing:border-box;}
