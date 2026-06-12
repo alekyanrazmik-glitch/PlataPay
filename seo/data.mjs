@@ -133,6 +133,7 @@ export const SERVICES = [
   { slug: 'tiktok', name: 'TikTok', cat: 'Музыка', logo: 'Tiktoc.WEBP', price: 600, tiers: ['монеты', 'подписка'], hint: 'пополнение монет для подарков стримерам и подписка на платный контент' },
 
   // Игры
+  { slug: 'steam', name: 'Steam', cat: 'Игры', logo: 'Steam.PNG', price: 800, tiers: ['Пополнение кошелька', 'Покупка игры', 'Подарок другу'], hint: 'крупнейшая площадка цифровой дистрибуции игр от Valve — пополняем кошелёк нужного региона (Казахстан, Турция, Аргентина), покупаем игры и подарки' },
   { slug: 'nintendo', name: 'Nintendo eShop', cat: 'Игры', logo: 'Nintendo.PNG', price: 1000, tiers: ['eShop', 'Online'], hint: 'пополнение eShop и подписка Nintendo Switch Online для онлайн-игры и ретро-каталога' },
   { slug: 'faceit', name: 'FACEIT', cat: 'Игры', logo: 'Faceit.PNG', price: 900, tiers: ['Premium'], hint: 'киберспортивная площадка для CS2 и других игр с более чистыми лобби, чем матчмейкинг Valve' },
   { slug: 'ps-plus-turkey', name: 'PS Plus (Турция)', cat: 'Игры', logo: 'Подписка%20PS%20Plus%20%28Турция%29.PNG', price: 1500, tiers: ['Essential', 'Extra', 'Deluxe'], hint: 'подписка PlayStation Plus через турецкий аккаунт, потому что в РФ-регионе её больше нет' },
