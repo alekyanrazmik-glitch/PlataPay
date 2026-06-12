@@ -10,18 +10,20 @@
 //   ├── robots.txt, sitemap.xml, .nojekyll
 //   ├── css/   js/   images/
 //
-// Patches each page so it works under GitHub Pages /PlataPay/:
-//   - injects <base href="/PlataPay/"> so relative asset paths resolve
-//   - rewrites nav links /, /catalog, /faq, /contacts to relative
-//     paths so they survive the basePath
+// Patches each page so it works under both a project-pages basePath
+// (e.g. /PlataPay/ at *.github.io) and a custom-domain root (e.g.
+// payoplata.ru/). actions/configure-pages emits an empty string when
+// a custom domain is set, so an empty env value must mean "no prefix"
+// — not fall back to /PlataPay/.
 
 import fs from 'node:fs';
 import path from 'node:path';
 
 const SRC = 'tilda-original';
 const OUT = 'out';
-const BASE = process.env.NEXT_PUBLIC_BASE_PATH || '/PlataPay';
-const BASE_HREF = BASE.endsWith('/') ? BASE : BASE + '/';
+const RAW_BASE = process.env.NEXT_PUBLIC_BASE_PATH;
+const BASE = RAW_BASE === undefined ? '/PlataPay' : RAW_BASE;
+const BASE_HREF = BASE === '' ? '/' : BASE.endsWith('/') ? BASE : BASE + '/';
 
 const PAGES = [
   { src: 'page142115676.html', dest: 'index.html', isHome: true },
@@ -71,48 +73,76 @@ for (const f of fs.readdirSync(SRC)) {
   if (!placed) fs.copyFileSync(full, path.join(OUT, f));
 }
 
-// Copy the favicon and 404 at the root for browsers/CDNs
+// Copy the favicon at the root for browsers/CDNs
 fs.copyFileSync(
   path.join(SRC, 'tild3863-3361-4433-b334-613561366261__platapay_favicon.svg'),
   path.join(OUT, 'favicon.svg'),
 );
-fs.copyFileSync(path.join(SRC, '404.html'), path.join(OUT, '404.html'));
 fs.copyFileSync(path.join(SRC, 'robots.txt'), path.join(OUT, 'robots.txt'));
 fs.copyFileSync(path.join(SRC, 'sitemap.xml'), path.join(OUT, 'sitemap.xml'));
+
+// Custom 404 that matches the site rather than Tilda's stock page
+fs.writeFileSync(
+  path.join(OUT, '404.html'),
+  `<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>404 — PlataPay</title>
+<link rel="icon" href="${BASE_HREF}favicon.svg" type="image/svg+xml">
+<style>
+  :root { color-scheme: dark; }
+  html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',system-ui,sans-serif;background:#08172F;color:#eef3ff;}
+  .wrap{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;}
+  .tag{font-size:12px;letter-spacing:.12em;color:#7BAEFF;text-transform:uppercase;font-weight:600;}
+  h1{font-size:48px;margin:16px 0 8px;font-weight:600;letter-spacing:-.02em;}
+  p{color:#9fb2d4;max-width:480px;margin:0 0 24px;line-height:1.5;}
+  .btns{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;}
+  a{display:inline-flex;align-items:center;padding:12px 20px;border-radius:999px;font-size:15px;font-weight:600;text-decoration:none;}
+  .primary{background:linear-gradient(180deg,#2e7bff,#1e5fd6);color:#fff;}
+  .ghost{background:#0c1f40;color:#eef3ff;border:1px solid #1d3a6b;}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="tag">404</div>
+    <h1>Страница не найдена</h1>
+    <p>Возможно, страница была перемещена или ссылка устарела. Откройте каталог или вернитесь на главную.</p>
+    <div class="btns">
+      <a class="primary" href="${BASE_HREF}">На главную</a>
+      <a class="ghost" href="${BASE_HREF}catalog/">Открыть каталог</a>
+    </div>
+  </div>
+</body>
+</html>
+`,
+);
 
 // .nojekyll so GitHub Pages serves _next-style files too
 fs.writeFileSync(path.join(OUT, '.nojekyll'), '');
 
 function patchPage(html, isHome) {
-  // 1) base href so relative asset paths (css/, js/, images/) resolve
+  // 1) Nav links: rewrite absolute SPA-style paths to relative paths
+  //    that combine with <base href> correctly. Done BEFORE the base
+  //    tag is injected — otherwise href="/" inside <base href="/">
+  //    would itself match and turn into href="./".
+  const navRewrites = [
+    [/href="\/"/g, 'href="./"'],
+    [/href="\/catalog\/?"/g, 'href="catalog/"'],
+    [/href="\/catalog\?/g, 'href="catalog/?'],
+    [/href="\/faq\/?"/g, 'href="faq/"'],
+    [/href="\/contacts\/?"/g, 'href="contacts/"'],
+    [/href="\/#/g, 'href="./#'],
+    [/action="\/catalog\/?"/g, 'action="catalog/"'],
+  ];
+  for (const [re, repl] of navRewrites) html = html.replace(re, repl);
+
+  // 2) base href so relative asset paths (css/, js/, images/) resolve
   //    correctly from any depth and under any GitHub Pages basePath.
-  if (!/<base\s+href=/.test(html)) {
-    html = html.replace(/<head([^>]*)>/i, `<head$1><base href="${BASE_HREF}">`);
-  }
-
-  // 2) Nav links: rewrite absolute SPA-style paths to relative paths
-  //    that combine with <base href> correctly.
-  const navMap = {
-    '"/"': '"./"',
-    '"/catalog"': '"catalog/"',
-    '"/catalog/"': '"catalog/"',
-    '"/faq"': '"faq/"',
-    '"/faq/"': '"faq/"',
-    '"/contacts"': '"contacts/"',
-    '"/contacts/"': '"contacts/"',
-  };
-  for (const [k, v] of Object.entries(navMap)) {
-    html = html.split(`href=${k}`).join(`href=${v}`);
-  }
-  // Query strings like /catalog?q=ChatGPT — preserve the query
-  html = html.replace(/href="\/catalog\?/g, 'href="catalog/?');
-
-  // 3) Anchors that point to the home page section like /#Otzivi
-  //    should target the home, which lives at the base href.
-  html = html.replace(/href="\/#/g, 'href="./#');
-
-  // 4) Form action attributes that were /catalog should also be relative
-  html = html.replace(/action="\/catalog"/g, 'action="catalog/"');
+  //    Strip any pre-existing Tilda <base href="./"> first.
+  html = html.replace(/<base\s+href="[^"]*"\s*\/?>/gi, '');
+  html = html.replace(/<head([^>]*)>/i, `<head$1><base href="${BASE_HREF}">`);
 
   return html;
 }
