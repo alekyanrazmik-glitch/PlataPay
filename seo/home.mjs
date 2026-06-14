@@ -322,7 +322,7 @@ ${faqLd}
       <div><b>10 000+</b><span>выполненных оплат</span></div>
       <div><b>5 000+</b><span>клиентов</span></div>
       <div><b>5–15 мин</b><span>среднее время оплаты</span></div>
-      <div><b>4.9/5</b><span>средняя оценка</span></div>
+      <div><b>5,0 ★</b><span>оценка на Авито</span></div>
     </div>
   </div>
 </div>
