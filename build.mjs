@@ -19,6 +19,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { buildEnhancement } from './seo/enhance.mjs';
+import { OFERTA_BODY, renderOfertaPage } from './seo/oferta.mjs';
 
 const SRC = 'tilda-original';
 const OUT = 'out';
@@ -173,7 +174,15 @@ function patchPage(html, isHome) {
   );
   html = html.replace(/<div class="t-tildalabel[\s\S]*?<\/a>\s*<\/div>/gi, '');
 
-  // 4) Inject our mini order form + search autocomplete just before </body>.
+  // 4) Replace the legal text inside the #popupoferta modal with the
+  //    canonical offer from seo/oferta.mjs (single source of truth).
+  //    The .ppo-body close button is preserved.
+  html = html.replace(
+    /(<div class="ppo-body">)[\s\S]*?(<button class="ppo-btn")/,
+    (m, open, btn) => `${open}\n${OFERTA_BODY}\n${btn}`,
+  );
+
+  // 5) Inject our mini order form + search autocomplete just before </body>.
   html = html.replace('</body>', `${enhanceInject}</body>`);
 
   return html;
@@ -350,6 +359,16 @@ ${geoHubStyle}
 </body></html>`;
 fs.writeFileSync(path.join(OUT, 'geo', 'index.html'), geoIndex);
 seoUrls.push('https://payoplata.ru/geo/');
+
+// Standalone public-offer page at /oferta/ — linked from every SEO
+// landing footer and a canonical home for the offer text.
+fs.mkdirSync(path.join(OUT, 'oferta'), { recursive: true });
+fs.writeFileSync(
+  path.join(OUT, 'oferta', 'index.html'),
+  renderOfertaPage({ base: BASE_HREF, verifyTags: verifyTags() }),
+);
+seoUrls.push('https://payoplata.ru/oferta/');
+console.log('built oferta/index.html');
 
 // Rewrite sitemap.xml so search engines actually find the new pages.
 const baseUrls = [

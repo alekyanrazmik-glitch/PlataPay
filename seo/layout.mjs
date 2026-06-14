@@ -257,6 +257,7 @@ ${faqLd}
       <a href="${base}catalog/">Каталог</a>
       <a href="${base}faq/">FAQ</a>
       <a href="${base}contacts/">Контакты</a>
+      <a href="${base}oferta/">Публичная оферта</a>
     </div>
   </div>
 </footer>
