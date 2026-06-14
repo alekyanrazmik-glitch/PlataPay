@@ -16,6 +16,18 @@ const CUSTOM_ALIASES = {
   'ps-plus-turkey': ['PS Plus', 'PS Plus (Турция)'],
 };
 
+const CATEGORY_ACCENTS = {
+  AI: '#2e7bff',
+  Видео: '#a855f7',
+  Музыка: '#22c55e',
+  Игры: '#f97316',
+  Облако: '#38bdf8',
+  Бизнес: '#f59e0b',
+  Обучение: '#10b981',
+  Путешествия: '#14b8a6',
+  Маркет: '#ef4444',
+};
+
 function rubFromUsd(usd) {
   return Math.round(usd * RATE_RUB_PER_USD + SERVICE_FEE_RUB);
 }
@@ -65,6 +77,7 @@ const pricingServices = SERVICES.map((service) => {
     name: service.name,
     cat: service.cat,
     logo: service.logo,
+    accent: CATEGORY_ACCENTS[service.cat] || '#2e7bff',
     aliases,
     tiers,
     minRub: best ? best.rub : null,
@@ -79,36 +92,50 @@ export function buildPricingUiPatch() {
   .pp-card:not(.pp-cta),.pp-pc{cursor:pointer;}
   .pp-tariff-mask{position:fixed;inset:0;z-index:100000;background:rgba(3,9,22,.78);backdrop-filter:blur(5px);display:none;align-items:center;justify-content:center;padding:18px;overflow-y:auto;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','Segoe UI',system-ui,sans-serif;}
   .pp-tariff-mask.open{display:flex;}
-  .pp-tariff-modal{width:100%;max-width:720px;background:#0c1f40;border:1px solid #1d3a6b;border-radius:22px;color:#eef3ff;box-shadow:0 30px 90px rgba(0,0,0,.45);position:relative;padding:24px;}
-  .pp-tariff-close{position:absolute;top:12px;right:12px;width:36px;height:36px;border:0;border-radius:999px;background:rgba(255,255,255,.06);color:#9fb2d4;font-size:26px;line-height:1;cursor:pointer;}
-  .pp-tariff-close:hover{background:rgba(255,255,255,.12);color:#fff;}
-  .pp-tariff-title{font-size:25px;font-weight:800;letter-spacing:-.02em;margin:0 42px 6px 0;}
-  .pp-tariff-sub{color:#9fb2d4;margin:0 0 18px;font-size:14px;line-height:1.45;}
-  .pp-tariff-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;margin-top:16px;}
-  .pp-tariff-card{border:1px solid #2563FF;border-radius:16px;background:#08172F;padding:16px;display:flex;flex-direction:column;gap:8px;min-height:150px;}
-  .pp-tariff-name{font-weight:800;font-size:16px;line-height:1.25;}
-  .pp-tariff-usd{color:#8499c0;font-size:13px;}
-  .pp-tariff-rub{font-size:22px;font-weight:900;color:#fff;margin-top:auto;}
+  .pp-tariff-modal{--svc-accent:#2e7bff;width:100%;max-width:760px;background:linear-gradient(180deg,rgba(12,31,64,.98),rgba(8,23,47,.98));border:1px solid color-mix(in srgb,var(--svc-accent) 45%,#1d3a6b);border-radius:24px;color:#eef3ff;box-shadow:0 30px 90px rgba(0,0,0,.48);position:relative;padding:24px;overflow:hidden;}
+  .pp-tariff-modal:before{content:"";position:absolute;inset:-120px -90px auto auto;width:280px;height:280px;background:radial-gradient(circle,color-mix(in srgb,var(--svc-accent) 35%,transparent),transparent 68%);pointer-events:none;}
+  .pp-tariff-modal:after{content:"";position:absolute;left:-120px;bottom:-160px;width:340px;height:340px;background:radial-gradient(circle,color-mix(in srgb,var(--svc-accent) 18%,transparent),transparent 70%);pointer-events:none;}
+  .pp-tariff-modal>*{position:relative;z-index:1;}
+  .pp-tariff-close{position:absolute;z-index:3;top:12px;right:12px;width:36px;height:36px;border:0;border-radius:999px;background:rgba(255,255,255,.08);color:#c9d7ef;font-size:26px;line-height:1;cursor:pointer;}
+  .pp-tariff-close:hover{background:rgba(255,255,255,.14);color:#fff;}
+  .pp-tariff-hero{display:flex;align-items:center;gap:14px;margin:0 42px 18px 0;}
+  .pp-tariff-logo{width:58px;height:58px;flex:0 0 auto;border-radius:16px;background:#fff;display:grid;place-items:center;overflow:hidden;box-shadow:0 12px 28px -14px var(--svc-accent),0 0 0 1px rgba(255,255,255,.10);}
+  .pp-tariff-logo img{width:100%;height:100%;object-fit:contain;padding:7px;box-sizing:border-box;}
+  .pp-tariff-logo-fallback{background:linear-gradient(135deg,var(--svc-accent),#08172F);color:#fff;font-weight:900;font-size:22px;}
+  .pp-tariff-title{font-size:25px;font-weight:800;letter-spacing:-.02em;margin:0 0 4px;}
+  .pp-tariff-sub{color:#9fb2d4;margin:0;font-size:14px;line-height:1.45;}
+  .pp-tariff-badge{display:inline-flex;align-items:center;gap:6px;border:1px solid color-mix(in srgb,var(--svc-accent) 55%,transparent);background:color-mix(in srgb,var(--svc-accent) 16%,transparent);color:#fff;border-radius:999px;padding:5px 10px;font-size:12px;font-weight:800;margin:0 0 8px;}
+  .pp-tariff-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(205px,1fr));gap:12px;margin-top:16px;}
+  .pp-tariff-card{border:1px solid color-mix(in srgb,var(--svc-accent) 50%,#1d3a6b);border-radius:18px;background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.018));padding:16px;display:flex;flex-direction:column;gap:8px;min-height:168px;box-shadow:inset 0 1px 0 rgba(255,255,255,.06);}
+  .pp-tariff-card:hover{transform:translateY(-2px);border-color:var(--svc-accent);box-shadow:0 18px 38px -26px var(--svc-accent),inset 0 1px 0 rgba(255,255,255,.08);}
+  .pp-tariff-top{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .pp-tariff-mini{width:28px;height:28px;border-radius:9px;background:#fff;display:grid;place-items:center;overflow:hidden;flex:0 0 auto;}
+  .pp-tariff-mini img{width:100%;height:100%;object-fit:contain;padding:4px;box-sizing:border-box;}
+  .pp-tariff-name{font-weight:850;font-size:17px;line-height:1.25;}
+  .pp-tariff-usd{color:#9fb2d4;font-size:13px;}
+  .pp-tariff-rub{font-size:24px;font-weight:950;color:#fff;margin-top:auto;letter-spacing:-.02em;}
   .pp-tariff-note{font-size:12px;color:#8499c0;line-height:1.35;}
-  .pp-tariff-pick{border:1px solid #39ff14;background:transparent;color:#39ff14;border-radius:11px;padding:10px 12px;font-weight:800;cursor:pointer;margin-top:4px;}
-  .pp-tariff-pick:hover{background:rgba(57,255,20,.12);}
-  .pp-checkout-box{border:1px solid #1d3a6b;background:#08172F;border-radius:16px;padding:16px;margin-top:16px;}
-  .pp-checkout-summary{border:1px solid rgba(46,123,255,.45);background:rgba(46,123,255,.10);border-radius:13px;padding:12px 14px;margin-bottom:14px;}
+  .pp-tariff-pick{border:1px solid var(--svc-accent);background:color-mix(in srgb,var(--svc-accent) 18%,transparent);color:#fff;border-radius:12px;padding:11px 12px;font-weight:850;cursor:pointer;margin-top:4px;}
+  .pp-tariff-pick:hover{background:var(--svc-accent);}
+  .pp-checkout-box{border:1px solid color-mix(in srgb,var(--svc-accent) 40%,#1d3a6b);background:rgba(8,23,47,.82);border-radius:16px;padding:16px;margin-top:16px;}
+  .pp-checkout-summary{border:1px solid color-mix(in srgb,var(--svc-accent) 48%,transparent);background:color-mix(in srgb,var(--svc-accent) 12%,transparent);border-radius:13px;padding:12px 14px;margin-bottom:14px;}
   .pp-checkout-summary strong{display:block;margin-bottom:3px;}
-  .pp-checkout-summary span{color:#9fb2d4;font-size:13px;}
+  .pp-checkout-summary span{color:#cbd7ef;font-size:13px;}
   .pp-checkout-field{margin-bottom:12px;}
   .pp-checkout-field label{display:block;color:#9fb2d4;font-size:13px;margin-bottom:6px;}
   .pp-checkout-field input,.pp-checkout-field select{width:100%;box-sizing:border-box;background:#0c1f40;border:1px solid #1d3a6b;color:#eef3ff;border-radius:11px;padding:12px 13px;font:500 15px -apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',system-ui,sans-serif;}
-  .pp-checkout-field input:focus,.pp-checkout-field select:focus{outline:none;border-color:#2e7bff;}
-  .pp-checkout-row{display:grid;grid-template-columns:180px 1fr;gap:12px;}
-  .pp-checkout-submit{width:100%;border:0;border-radius:13px;background:linear-gradient(180deg,#2e7bff,#1e5fd6);color:#fff;font-weight:800;font-size:16px;padding:14px;cursor:pointer;}
-  .pp-checkout-back{width:100%;border:1px solid #1d3a6b;border-radius:13px;background:transparent;color:#cfd9ef;font-weight:700;font-size:14px;padding:12px;cursor:pointer;margin-top:10px;}
+  .pp-checkout-field input[readonly]{opacity:.92;background:rgba(255,255,255,.045);border-color:color-mix(in srgb,var(--svc-accent) 35%,#1d3a6b);}
+  .pp-checkout-field input:focus,.pp-checkout-field select:focus{outline:none;border-color:var(--svc-accent);}
+  .pp-checkout-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .pp-checkout-contact-row{display:grid;grid-template-columns:180px 1fr;gap:12px;}
+  .pp-checkout-submit{width:100%;border:0;border-radius:13px;background:linear-gradient(180deg,var(--svc-accent),color-mix(in srgb,var(--svc-accent) 70%,#08172F));color:#fff;font-weight:850;font-size:16px;padding:14px;cursor:pointer;}
+  .pp-checkout-back{width:100%;border:1px solid #1d3a6b;border-radius:13px;background:transparent;color:#cfd9ef;font-weight:750;font-size:14px;padding:12px;cursor:pointer;margin-top:10px;}
   .pp-checkout-error{color:#ff9b9b;font-size:13px;margin:8px 0 0;display:none;}
   .pp-checkout-ok{border:1px solid rgba(34,197,94,.45);background:rgba(34,197,94,.12);border-radius:14px;padding:16px;color:#d9ffe5;margin-top:16px;}
-  @media(max-width:560px){.pp-tariff-modal{padding:20px 16px;border-radius:18px}.pp-tariff-grid{grid-template-columns:1fr}.pp-checkout-row{grid-template-columns:1fr}.pp-tariff-title{font-size:22px}}
+  @media(max-width:560px){.pp-tariff-modal{padding:20px 16px;border-radius:18px}.pp-tariff-hero{align-items:flex-start}.pp-tariff-logo{width:50px;height:50px}.pp-tariff-grid{grid-template-columns:1fr}.pp-checkout-row,.pp-checkout-contact-row{grid-template-columns:1fr}.pp-tariff-title{font-size:22px}}
 </style>
 <div class="pp-tariff-mask" id="ppTariffMask" aria-hidden="true">
-  <div class="pp-tariff-modal" role="dialog" aria-modal="true" aria-label="Выбор тарифа">
+  <div class="pp-tariff-modal" id="ppTariffModal" role="dialog" aria-modal="true" aria-label="Выбор тарифа">
     <button class="pp-tariff-close" id="ppTariffClose" aria-label="Закрыть">×</button>
     <div id="ppTariffBody"></div>
   </div>
@@ -118,7 +145,9 @@ export function buildPricingUiPatch() {
   var SERVICES = ${JSON.stringify(pricingServices)};
   var RATE = ${RATE_RUB_PER_USD};
   var FEE = ${SERVICE_FEE_RUB};
+  var LOGO_BASE = 'https://raw.githubusercontent.com/alekyanrazmik-glitch/Just-PlataPay/master/';
   var mask = document.getElementById('ppTariffMask');
+  var modal = document.getElementById('ppTariffModal');
   var body = document.getElementById('ppTariffBody');
   var close = document.getElementById('ppTariffClose');
   var currentService = null;
@@ -126,6 +155,12 @@ export function buildPricingUiPatch() {
   function norm(s){ return String(s||'').toLowerCase().replace(/premium|pro|plus|creative cloud|cc|тариф|подписка/g,'').replace(/[^a-zа-я0-9]+/gi,''); }
   function money(rub){ return rub ? new Intl.NumberFormat('ru-RU').format(rub) + ' ₽' : 'по запросу'; }
   function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+  function logoSrc(s){ return s && s.logo ? LOGO_BASE + s.logo : ''; }
+  function logoHtml(s, cls){
+    var src=logoSrc(s);
+    if(src) return '<div class="'+cls+'"><img src="'+escapeHtml(src)+'" alt="" onerror="this.parentNode.className=\''+cls+' pp-tariff-logo-fallback\';this.parentNode.textContent=\''+escapeHtml((s.name||'?')[0])+'\';"></div>';
+    return '<div class="'+cls+' pp-tariff-logo-fallback">'+escapeHtml((s.name||'?')[0])+'</div>';
+  }
   function findService(name){
     var n = norm(name);
     if(!n) return null;
@@ -160,19 +195,27 @@ export function buildPricingUiPatch() {
       if(link){ link.setAttribute('href','#pp-tariffs'); link.setAttribute('role','button'); }
     });
   }
+  function setAccent(s){
+    modal.style.setProperty('--svc-accent', s.accent || '#2e7bff');
+  }
+  function tariffHeaderHtml(s){
+    return '<div class="pp-tariff-hero">'+logoHtml(s,'pp-tariff-logo')+'<div><div class="pp-tariff-badge">'+escapeHtml(s.cat || 'Сервис')+'</div><h3 class="pp-tariff-title">'+escapeHtml(s.name)+'</h3><p class="pp-tariff-sub">Выберите тариф. Цена считается автоматически: стоимость тарифа в долларах × '+RATE+' ₽ + '+FEE+' ₽.</p></div></div>';
+  }
   function tierCardsHtml(s){
-    var tiers = s.tiers && s.tiers.length ? s.tiers : [{label:'Индивидуальный тариф',usd:null,rub:null}];
+    var tiers = s.tiers && s.tiers.length ? s.tiers : [{label:'Индивидуальный тариф',plan:'Индивидуальный тариф',usd:null,rub:null}];
     var html = '<div class="pp-tariff-grid">';
     tiers.forEach(function(tier,idx){
       var usd = tier.usd ? '$'+tier.usd+' × '+RATE+' ₽ + '+FEE+' ₽' : 'Цена зависит от тарифа/суммы';
-      html += '<div class="pp-tariff-card"><div class="pp-tariff-name">'+escapeHtml(tier.label)+'</div><div class="pp-tariff-usd">'+escapeHtml(usd)+'</div><div class="pp-tariff-rub">'+money(tier.rub)+'</div><div class="pp-tariff-note">Итоговая цена для оплаты через PlataPay</div><button class="pp-tariff-pick" data-tier="'+idx+'">Выбрать</button></div>';
+      var price = money(tier.rub);
+      html += '<div class="pp-tariff-card"><div class="pp-tariff-top"><div class="pp-tariff-name">'+escapeHtml(tier.plan || tier.label)+'</div>'+logoHtml(s,'pp-tariff-mini')+'</div><div class="pp-tariff-usd">'+escapeHtml(usd)+'</div><div class="pp-tariff-rub">'+escapeHtml(price)+'</div><div class="pp-tariff-note">'+escapeHtml(s.name)+' · '+escapeHtml(tier.label)+'</div><button class="pp-tariff-pick" data-tier="'+idx+'">Выбрать тариф</button></div>';
     });
-    html += '<div class="pp-tariff-card"><div class="pp-tariff-name">Другой тариф / сумма</div><div class="pp-tariff-usd">Например, пополнение баланса или годовой тариф</div><div class="pp-tariff-rub">по запросу</div><div class="pp-tariff-note">Уточним сумму и пришлём ссылку на оплату</div><button class="pp-tariff-pick" data-tier="custom">Выбрать</button></div>';
+    html += '<div class="pp-tariff-card"><div class="pp-tariff-top"><div class="pp-tariff-name">Другой тариф / сумма</div>'+logoHtml(s,'pp-tariff-mini')+'</div><div class="pp-tariff-usd">Пополнение баланса, годовой тариф или другой план</div><div class="pp-tariff-rub">по запросу</div><div class="pp-tariff-note">Уточним сумму и пришлём ссылку на оплату</div><button class="pp-tariff-pick" data-tier="custom">Выбрать тариф</button></div>';
     return html + '</div>';
   }
   function openTariffs(s){
     currentService=s;
-    body.innerHTML = '<h3 class="pp-tariff-title">'+escapeHtml(s.name)+'</h3><p class="pp-tariff-sub">Выберите тариф. Цена считается автоматически: стоимость тарифа в долларах × '+RATE+' ₽ + '+FEE+' ₽.</p>' + tierCardsHtml(s);
+    setAccent(s);
+    body.innerHTML = tariffHeaderHtml(s) + tierCardsHtml(s);
     mask.classList.add('open');
     mask.setAttribute('aria-hidden','false');
     document.body.style.overflow='hidden';
@@ -181,9 +224,10 @@ export function buildPricingUiPatch() {
   function checkoutHtml(s,tier){
     var priceText = tier && tier.rub ? money(tier.rub) : 'по запросу';
     var tierName = tier ? tier.label : 'Другой тариф / сумма';
-    return '<h3 class="pp-tariff-title">Оформить оплату</h3><p class="pp-tariff-sub">Почта обязательна. Остальной способ связи можно выбрать дополнительно.</p><div class="pp-checkout-box"><div class="pp-checkout-summary"><strong>'+escapeHtml(s.name)+' — '+escapeHtml(tierName)+'</strong><span>Цена: '+escapeHtml(priceText)+'</span></div><form id="ppCheckoutForm"><div class="pp-checkout-field"><label>Email <b style="color:#ff9b9b">*</b></label><input id="ppCheckoutEmail" type="email" placeholder="name@example.com" required autocomplete="email"></div><div class="pp-checkout-row"><div class="pp-checkout-field"><label>Доп. способ связи</label><select id="ppCheckoutChannel"><option value="">Не нужен</option><option>Telegram</option><option>WhatsApp</option><option>Телефон</option></select></div><div class="pp-checkout-field"><label>Контакт</label><input id="ppCheckoutContact" type="text" placeholder="@username или номер телефона"></div></div><button class="pp-checkout-submit" type="submit">Продолжить к оплате</button><div class="pp-checkout-error" id="ppCheckoutError"></div></form><button class="pp-checkout-back" id="ppCheckoutBack">← Назад к тарифам</button></div>';
+    return tariffHeaderHtml(s)+'<h3 class="pp-tariff-title" style="font-size:21px;margin-top:8px;">Оформить оплату</h3><p class="pp-tariff-sub">Сервис, тариф и сумма уже заполнены. Клиенту остаётся указать почту и дополнительный контакт.</p><div class="pp-checkout-box"><div class="pp-checkout-summary"><strong>'+escapeHtml(s.name)+' — '+escapeHtml(tierName)+'</strong><span>Цена: '+escapeHtml(priceText)+'</span></div><form id="ppCheckoutForm"><div class="pp-checkout-row"><div class="pp-checkout-field"><label>Сервис</label><input readonly value="'+escapeHtml(s.name)+'"></div><div class="pp-checkout-field"><label>Тариф</label><input readonly value="'+escapeHtml(tierName)+'"></div></div><div class="pp-checkout-field"><label>Сумма</label><input readonly value="'+escapeHtml(priceText)+'"></div><div class="pp-checkout-field"><label>Email <b style="color:#ff9b9b">*</b></label><input id="ppCheckoutEmail" type="email" placeholder="name@example.com" required autocomplete="email"></div><div class="pp-checkout-contact-row"><div class="pp-checkout-field"><label>Доп. способ связи</label><select id="ppCheckoutChannel"><option value="">Не нужен</option><option>Telegram</option><option>WhatsApp</option><option>Телефон</option></select></div><div class="pp-checkout-field"><label>Контакт</label><input id="ppCheckoutContact" type="text" placeholder="@username или номер телефона"></div></div><button class="pp-checkout-submit" type="submit">Продолжить к оплате</button><div class="pp-checkout-error" id="ppCheckoutError"></div></form><button class="pp-checkout-back" id="ppCheckoutBack">← Назад к тарифам</button></div>';
   }
   function openCheckout(s,tier){
+    setAccent(s);
     body.innerHTML = checkoutHtml(s,tier);
     var form=document.getElementById('ppCheckoutForm');
     var back=document.getElementById('ppCheckoutBack');
@@ -216,7 +260,7 @@ export function buildPricingUiPatch() {
     if(!btn || !currentService) return;
     e.preventDefault();
     var idx=btn.getAttribute('data-tier');
-    var tier = idx==='custom' ? {label:'Другой тариф / сумма',usd:null,rub:null} : currentService.tiers[Number(idx)];
+    var tier = idx==='custom' ? {label:'Другой тариф / сумма',plan:'Другой тариф / сумма',usd:null,rub:null} : currentService.tiers[Number(idx)];
     openCheckout(currentService,tier);
   });
   document.addEventListener('click',function(e){
