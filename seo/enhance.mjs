@@ -47,7 +47,10 @@ export function buildEnhancement(baseHref) {
   .pp-mm-modal .pp-mm-consent a{color:#7BAEFF;}
 
   /* autocomplete dropdown */
-  .pp-ac-wrap{position:relative;}
+  /* The input we wrap had flex:1 inside the flex search form; mirror it
+     here so the field still fills the row and the button stays on the
+     right instead of collapsing toward the middle. */
+  .pp-ac-wrap{position:relative;flex:1 1 auto;min-width:0;}
   .pp-ac-drop{position:absolute;left:0;right:0;top:calc(100% + 8px);background:#0c1f40;border:1px solid #1d3a6b;border-radius:12px;max-height:360px;overflow:auto;z-index:200;display:none;box-shadow:0 24px 60px -20px rgba(0,0,0,.6);}
   .pp-ac-drop[data-open="1"]{display:block;}
   .pp-ac-item{display:flex;align-items:center;gap:12px;padding:10px 14px;cursor:pointer;color:#eef3ff;font-size:14px;border-bottom:1px solid #16315f;text-decoration:none;}
