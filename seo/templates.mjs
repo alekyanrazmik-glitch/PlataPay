@@ -356,4 +356,685 @@ export function year(s, intents) {
 
 export const RENDERERS = { oplata, kak, rf, cena, sub, year };
 
+// =====================================================================
+//  New verticals: tickets, foreign shops, gift cards, game assets.
+//  These renderers are "kind-aware" — the prose, H1/H2, FAQ and examples
+//  differ per category so pages are not near-duplicates of the
+//  subscription pages or of each other.
+// =====================================================================
+
+// Per-kind vocabulary. Generic renderers below weave these strings into
+// the copy so a "Оплата" page for a ticket reads differently from a
+// "Оплата" page for a shop or a gift card.
+function vocab(s) {
+  const kind = (CATEGORIES[s.cat] && CATEGORIES[s.cat].kind) || 'subscription';
+  const V = {
+    ticket: {
+      site: 'площадка',
+      thing: 'билеты',
+      thingAcc: 'билеты',
+      thingGen: 'билетов',
+      buyVerb: 'купить билеты',
+      receive: 'электронные билеты (e-ticket) или подтверждение брони на вашу почту',
+      whatPay: `входные билеты, проход без очереди, экскурсии и дополнительные опции — всё, что продаёт ${s.name}`,
+      data: ['Дата и время посещения или конкретный сеанс / событие', 'Количество билетов и категория (взрослый, детский, льготный)', 'Email — на него придут билеты', 'Способ связи: Telegram, WhatsApp или телефон'],
+      time: 'обычно от 15 минут; если билеты на конкретный сеанс — оформляем строго к нужной дате',
+      rfCard: `Нет. Сайт ${s.name} принимает оплату через западный платёжный шлюз, который отклоняет карты российских банков. Поэтому билеты оплачиваем мы — с зарубежной карты на ваше имя.`,
+    },
+    shop: {
+      site: 'магазин',
+      thing: 'заказ',
+      thingAcc: 'заказ',
+      thingGen: 'заказа',
+      buyVerb: 'оплатить заказ',
+      receive: 'оплаченный заказ с трек-номером и подтверждением на почту',
+      whatPay: `товары из корзины, предзаказы и доставку в магазине ${s.name}`,
+      data: ['Ссылки на товары или собранную корзину', 'Размер, цвет и количество', 'Адрес доставки (или адрес посредника/склада)', 'Способ связи: Telegram, WhatsApp или телефон'],
+      time: 'оплата заказа — 15–30 минут после согласования суммы; доставка зависит от магазина и логистики',
+      rfCard: `Нет. ${s.name} не принимает карты, выпущенные в России, а часто и не доставляет в РФ напрямую. Мы оплачиваем заказ с зарубежной карты и помогаем с доставкой.`,
+    },
+    giftcard: {
+      site: 'сервис',
+      thing: 'подарочную карту',
+      thingAcc: 'подарочную карту',
+      thingGen: 'подарочной карты',
+      buyVerb: 'купить подарочную карту',
+      receive: 'код подарочной карты в Telegram или на почту — сразу после оплаты',
+      whatPay: `подарочные карты ${s.name} нужного региона любого номинала`,
+      data: ['Регион карты (например, US, TR, EU) — под ваш аккаунт', 'Номинал карты', 'Способ получения кода: Telegram или email'],
+      time: 'обычно 5–30 минут — код присылаем, как только покупка проходит',
+      rfCard: `Нет. Купить карту ${s.name} нужного региона с российской карты не получится, а карта «не того» региона не активируется в вашем аккаунте. Мы покупаем карту правильного региона и присылаем код.`,
+    },
+    asset: {
+      site: 'маркетплейс',
+      thing: 'ассет',
+      thingAcc: 'ассет или 3D-модель',
+      thingGen: 'ассета',
+      buyVerb: 'купить ассет',
+      receive: 'покупку в вашей библиотеке аккаунта — с лицензией, оформленной на вас',
+      whatPay: `ассеты, 3D-модели, материалы и плагины на ${s.name}`,
+      data: ['Ссылка на ассет или 3D-модель', 'Тип лицензии (если есть выбор)', 'Логин аккаунта, в котором нужна покупка', 'Способ связи: Telegram, WhatsApp или телефон'],
+      time: 'обычно 10–30 минут после подтверждения оплаты',
+      rfCard: `Нет. ${s.name} принимает оплату только западными картами. Мы покупаем ассет с зарубежной карты на ваш аккаунт — покупка появляется в вашей библиотеке.`,
+    },
+  };
+  return V[kind] || V.ticket;
+}
+
+function tiersBlock(s, label) {
+  if (!s.tiers || !s.tiers.length) return '';
+  return `<p>${label}</p><ul class="tiers">${tiers(s)}</ul>`;
+}
+
+function priceLine(s) {
+  return s.price
+    ? `Минимальная стоимость через нас — ${fmtRubBare(s.price)} с учётом нашей комиссии и конвертации.`
+    : `Итоговая сумма зависит от вашего заказа: называем точную цену в рублях до оплаты, скрытых платежей нет.`;
+}
+
+// ---------- Generic (kind-aware) renderers ----------
+
+function gOplata(s) {
+  const cat = CATEGORIES[s.cat];
+  const v = vocab(s);
+  return {
+    title: `Оплата ${s.name} из России — ${cat.label || cat.title} | PlataPay`,
+    description: `Оплачиваем ${s.name} из России с зарубежной карты: ${v.whatPay}. ${priceLine(s)} Заявка и ответ за 5–15 минут.`,
+    h1: `Оплата ${s.name} из России`,
+    body: `
+      <section class="block">
+        <p class="lead">${s.name} — ${s.hint}. Напрямую оплатить ${v.thingAcc} картой российского банка не получится: ${cat.pain.split('. ')[0].toLowerCase()}. PlataPay решает это за вас — вы оставляете заявку, мы оплачиваем, вы получаете ${v.receive}.</p>
+      </section>
+
+      <section class="block">
+        <h2>Что можно оплатить в ${s.name}</h2>
+        <p>Через нас можно оплатить ${v.whatPay}. ${cat.workaround}</p>
+        ${tiersBlock(s, `Что чаще всего оплачивают на ${s.name}:`)}
+      </section>
+
+      <section class="block">
+        <h2>Как проходит оплата</h2>
+        <ol class="steps">
+          <li>Вы оставляете заявку: что именно нужно оплатить на ${s.name}.</li>
+          <li>Мы считаем итог в рублях и согласовываем сумму.</li>
+          <li>Вы оплачиваете нам удобным способом — СБП, картой РФ или переводом.</li>
+          <li>Мы оплачиваем ${v.thingAcc} с зарубежной карты.</li>
+          <li>Вы получаете ${v.receive}.</li>
+        </ol>
+      </section>
+
+      <section class="block">
+        <h2>Можно ли оплатить ${s.name} российской картой</h2>
+        <p>${v.rfCard}</p>
+      </section>
+
+      <section class="block">
+        <h2>Сколько занимает</h2>
+        <p>По времени — ${v.time}.</p>
+      </section>
+
+      <section class="block cta">
+        <h2>Оплатить ${s.name}</h2>
+        <p>Оставьте заявку — ответим в течение 5–15 минут.</p>
+        <a class="btn-primary" href="https://payoplata.ru/#popupforma">Оформить заявку</a>
+      </section>
+    `,
+    faq: [
+      { q: `Можно ли оплатить ${s.name} картой РФ?`, a: v.rfCard },
+      { q: `Что я получу после оплаты ${s.name}?`, a: `Вы получаете ${v.receive}.` },
+      { q: `Сколько стоит оплата ${s.name}?`, a: priceLine(s) },
+    ],
+  };
+}
+
+function gKak(s) {
+  const cat = CATEGORIES[s.cat];
+  const v = vocab(s);
+  return {
+    title: `Как оплатить ${s.name} из России в ${YEAR} — пошагово | PlataPay`,
+    description: `Пошаговая инструкция: как оплатить ${s.name} из России в ${YEAR} году. Какие данные нужны, как проходит оплата, можно ли картой РФ, сколько занимает.`,
+    h1: `Как оплатить ${s.name} из России в ${YEAR} году`,
+    body: `
+      <section class="block">
+        <p class="lead">Чтобы оплатить ${v.thingAcc} в ${s.name} из России в ${YEAR} году, нужна зарубежная карта — российская на этой ${v.site} не проходит. Ниже разберём, какие данные подготовить и как мы оплачиваем за вас.</p>
+      </section>
+
+      <section class="block">
+        <h2>Какие данные нужны</h2>
+        <ul class="check">
+          ${v.data.map((d) => `<li>${d}</li>`).join('')}
+        </ul>
+      </section>
+
+      <section class="block">
+        <h2>Как мы оплачиваем ${s.name} — по шагам</h2>
+        <ol class="steps">
+          <li>Вы присылаете детали заказа на ${s.name}.</li>
+          <li>Мы подтверждаем сумму в рублях. ${priceLine(s)}</li>
+          <li>Вы оплачиваете нам: СБП, карта РФ или перевод.</li>
+          <li>Мы оплачиваем ${v.thingAcc} с зарубежной карты.</li>
+          <li>Вы получаете ${v.receive} и чек.</li>
+        </ol>
+      </section>
+
+      <section class="block">
+        <h2>Можно ли картой РФ напрямую</h2>
+        <p>${v.rfCard}</p>
+      </section>
+
+      <section class="block">
+        <h2>Если что-то пойдёт не так</h2>
+        <p>Если оплату ${s.name} провести не удалось по нашей вине или со стороны ${v.site}, мы возвращаем деньги в полном объёме. Сумму и условия фиксируем до оплаты.</p>
+      </section>
+
+      <section class="block cta">
+        <h2>Оплатить ${s.name}</h2>
+        <a class="btn-primary" href="https://payoplata.ru/#popupforma">Оставить заявку</a>
+        <p class="hint">Ответ за 1–15 минут.</p>
+      </section>
+    `,
+    faq: [
+      { q: `Какие данные нужны, чтобы оплатить ${s.name}?`, a: `${v.data.join('; ')}.` },
+      { q: `Сколько занимает оплата ${s.name}?`, a: v.time },
+      { q: `Вернёте ли деньги, если оплатить ${s.name} не получится?`, a: `Да, при неудачной оплате возвращаем сумму полностью.` },
+    ],
+  };
+}
+
+function gRf(s) {
+  const cat = CATEGORIES[s.cat];
+  const v = vocab(s);
+  const others = cat.examples.filter((e) => e !== s.name).slice(0, 3).join(', ');
+  return {
+    title: `${s.name} из России в ${YEAR} — как оплатить ${v.thingAcc}`,
+    description: `${s.name} из России в ${YEAR}: почему не проходит карта РФ, что работает и как оплатить ${v.thingAcc} через посредника без иностранной карты.`,
+    h1: `${s.name} из России в ${YEAR} году`,
+    body: `
+      <section class="block">
+        <p class="lead">${s.name} — ${s.hint}. Сама ${v.site} из России открывается, но оплатить ${v.thingAcc} картой российского банка нельзя. Разберём, как обойти ограничение.</p>
+      </section>
+
+      <section class="block">
+        <h2>Почему не проходит карта РФ</h2>
+        <p>${cat.pain}</p>
+      </section>
+
+      <section class="block">
+        <h2>Что работает в ${YEAR}</h2>
+        <ul class="check">
+          <li>Зарубежная карта (Казахстан, Армения, Грузия, ОАЭ, Турция) — если она у вас есть</li>
+          <li>Оплата через посредника с реальной зарубежной картой — самый стабильный вариант</li>
+          <li>PlataPay: вы платите рублями, мы оплачиваем ${v.thingAcc}, вы получаете ${v.receive}</li>
+        </ul>
+      </section>
+
+      <section class="block">
+        <h2>Похожие сервисы</h2>
+        <p>В категории «${(cat.label || cat.title).toLowerCase()}» рядом с ${s.name} мы также оплачиваем: ${others}. Принцип тот же — оплата с зарубежной карты на ваше имя.</p>
+      </section>
+
+      <section class="block cta">
+        <h2>Оплатить ${s.name} из России</h2>
+        <a class="btn-primary" href="https://payoplata.ru/#popupforma">Оставить заявку</a>
+      </section>
+    `,
+    faq: [
+      { q: `Работает ли ${s.name} из России в ${YEAR}?`, a: `Да, ${v.site} доступна; оплата — через посредника или зарубежную карту.` },
+      { q: `Можно ли оплатить ${s.name} картой Мир или UnionPay РФ?`, a: v.rfCard },
+      { q: `Что я получу?`, a: `Вы получаете ${v.receive}.` },
+    ],
+  };
+}
+
+function gCena(s) {
+  const cat = CATEGORIES[s.cat];
+  const v = vocab(s);
+  return {
+    title: `${s.name} — цена в рублях из России (${YEAR})`,
+    description: `Сколько стоит оплата ${s.name} из России в ${YEAR} году: из чего складывается цена, как считается курс и комиссия, как узнать точную сумму.`,
+    h1: `${s.name} — цена и оплата из России в ${YEAR}`,
+    body: `
+      <section class="block">
+        <p class="lead">${s.name} — ${s.hint}. Цены выставлены в валюте, но из России оплатить их напрямую не выйдет. Здесь — как формируется итоговая стоимость в рублях.</p>
+      </section>
+
+      <section class="block">
+        <h2>Из чего складывается цена</h2>
+        <ul class="check">
+          <li>Стоимость ${v.thingGen} в валюте на ${s.name}</li>
+          <li>Конвертация по курсу банка-эмитента нашей карты (близко к биржевому)</li>
+          <li>Наша комиссия — от 5%</li>
+        </ul>
+        <p>${priceLine(s)} Итог в рублях называем до оплаты — без скрытых платежей.</p>
+        ${tiersBlock(s, `Что обычно оплачивают на ${s.name}:`)}
+      </section>
+
+      <section class="block">
+        <h2>Способы оплаты</h2>
+        <p>Принимаем рубли: СБП, карта российского банка или перевод на счёт. Вы платите нам — мы оплачиваем ${v.thingAcc} в валюте.</p>
+      </section>
+
+      <section class="block cta">
+        <h2>Узнать точную сумму</h2>
+        <a class="btn-primary" href="https://payoplata.ru/#popupforma">Оставить заявку</a>
+      </section>
+    `,
+    faq: [
+      { q: `Сколько стоит оплата ${s.name} из России?`, a: priceLine(s) },
+      { q: `Можно ли оплатить рублями?`, a: `Да. Вы платите нам рублями, мы оплачиваем ${v.thingAcc} в валюте.` },
+      { q: `Меняется ли цена из-за курса?`, a: `Да, ориентируемся на курс на момент оплаты; заметное изменение согласуем заранее.` },
+    ],
+  };
+}
+
+function gYear(s) {
+  const cat = CATEGORIES[s.cat];
+  const v = vocab(s);
+  return {
+    title: `${s.name} в России в ${YEAR} — обзор и оплата`,
+    description: `${s.name} в ${YEAR} году в России: что доступно, как оплатить ${v.thingAcc}, сколько стоит и как оставить заявку.`,
+    h1: `${s.name} в России в ${YEAR}`,
+    body: `
+      <section class="block">
+        <p class="lead">К ${YEAR} году схема оплаты ${s.name} из России устоялась: сама ${v.site} работает, карта РФ — нет, а оплату закрывает посредник. Короткий обзор ниже.</p>
+      </section>
+
+      <section class="block">
+        <h2>Что можно оплатить в ${YEAR}</h2>
+        <p>${v.whatPay}. ${cat.workaround}</p>
+        ${tiersBlock(s, `Популярные варианты на ${s.name}:`)}
+      </section>
+
+      <section class="block">
+        <h2>Как оплатить</h2>
+        <ul class="check">
+          <li>Зарубежная карта — если есть</li>
+          <li>Оплата через PlataPay — делаем всё за вас</li>
+        </ul>
+        <p>${priceLine(s)} Вы получаете ${v.receive}.</p>
+      </section>
+
+      <section class="block cta">
+        <h2>Оплатить ${s.name} в ${YEAR}</h2>
+        <a class="btn-primary" href="https://payoplata.ru/#popupforma">Оформить заявку</a>
+      </section>
+    `,
+    faq: [
+      { q: `Доступен ли ${s.name} из России в ${YEAR}?`, a: `Да. ${v.site[0].toUpperCase() + v.site.slice(1)} работает; оплата — через посредника или зарубежную карту.` },
+      { q: `Сколько стоит?`, a: priceLine(s) },
+    ],
+  };
+}
+
+// ---------- Tickets-specific renderers ----------
+
+function kupitBilet(s) {
+  const cat = CATEGORIES[s.cat];
+  const v = vocab(s);
+  return {
+    title: `Купить билеты в ${s.name} из России в ${YEAR} | PlataPay`,
+    description: `Как купить билеты в ${s.name} из России: что можно оплатить, какие данные нужны, можно ли картой РФ, сколько занимает. Заявка и ответ за 5–15 минут.`,
+    h1: `Купить билеты в ${s.name} из России`,
+    body: `
+      <section class="block">
+        <p class="lead">${s.name} — ${s.hint}. Билеты продаются на зарубежном сайте, который не принимает карты РФ. Мы покупаем билеты за вас и присылаем ${v.receive}.</p>
+      </section>
+
+      <section class="block">
+        <h2>Какие билеты можно купить</h2>
+        <p>Через нас доступны ${v.whatPay}.</p>
+        ${tiersBlock(s, `Варианты билетов ${s.name}:`)}
+      </section>
+
+      <section class="block">
+        <h2>Какие данные нужны</h2>
+        <ul class="check">${v.data.map((d) => `<li>${d}</li>`).join('')}</ul>
+      </section>
+
+      <section class="block">
+        <h2>Как проходит покупка</h2>
+        <ol class="steps">
+          <li>Вы выбираете дату/сеанс и тип билета на ${s.name}.</li>
+          <li>Мы подтверждаем сумму в рублях.</li>
+          <li>Вы оплачиваете нам — СБП, карта РФ или перевод.</li>
+          <li>Мы покупаем билеты с зарубежной карты.</li>
+          <li>Вы получаете ${v.receive}.</li>
+        </ol>
+      </section>
+
+      <section class="block">
+        <h2>Можно ли купить билеты картой РФ</h2>
+        <p>${v.rfCard}</p>
+      </section>
+
+      <section class="block">
+        <h2>Сколько занимает</h2>
+        <p>${v.time}.</p>
+      </section>
+
+      <section class="block cta">
+        <h2>Купить билеты в ${s.name}</h2>
+        <p>Оставьте заявку — ответим за 5–15 минут.</p>
+        <a class="btn-primary" href="https://payoplata.ru/#popupforma">Оформить заявку</a>
+      </section>
+    `,
+    faq: [
+      { q: `Как купить билеты в ${s.name} из России?`, a: `Оставьте заявку с датой и типом билета — мы покупаем билеты с зарубежной карты и присылаем ${v.receive}.` },
+      { q: `Можно ли оплатить билеты ${s.name} картой РФ?`, a: v.rfCard },
+      { q: `Сколько занимает покупка билетов?`, a: v.time },
+    ],
+  };
+}
+
+function oplataBiletov(s) {
+  const v = vocab(s);
+  return {
+    title: `Оплата билетов ${s.name} из России — быстро и без иностранной карты`,
+    description: `Оплата билетов ${s.name} из России: оплачиваем с зарубежной карты на ваше имя, присылаем e-ticket. Что нужно и сколько занимает.`,
+    h1: `Оплата билетов ${s.name} из России`,
+    body: `
+      <section class="block">
+        <p class="lead">Если бронь на ${s.name} собрана, но оплата картой РФ не проходит — мы оплатим билеты за вас. ${s.name} — ${s.hint}.</p>
+      </section>
+
+      <section class="block">
+        <h2>Что мы оплачиваем</h2>
+        <p>${v.whatPay}. После оплаты вы получаете ${v.receive}.</p>
+        ${tiersBlock(s, `Типы билетов ${s.name}:`)}
+      </section>
+
+      <section class="block">
+        <h2>Как оплатить билеты</h2>
+        <ol class="steps">
+          <li>Пришлите ссылку на бронь или параметры билета.</li>
+          <li>Согласуем сумму в рублях.</li>
+          <li>Вы оплачиваете нам, мы — билеты с зарубежной карты.</li>
+          <li>Получаете ${v.receive}.</li>
+        </ol>
+      </section>
+
+      <section class="block">
+        <h2>Можно ли оплатить картой РФ</h2>
+        <p>${v.rfCard}</p>
+      </section>
+
+      <section class="block cta">
+        <h2>Оплатить билеты ${s.name}</h2>
+        <a class="btn-primary" href="https://payoplata.ru/#popupforma">Оформить заявку</a>
+        <p class="hint">${v.time}.</p>
+      </section>
+    `,
+    faq: [
+      { q: `Как оплатить билеты ${s.name} из России?`, a: `Пришлите бронь — оплатим с зарубежной карты и вышлем ${v.receive}.` },
+      { q: `Можно ли оплатить билеты картой РФ?`, a: v.rfCard },
+      { q: `Что я получу?`, a: `Вы получаете ${v.receive}.` },
+    ],
+  };
+}
+
+function oplataDostoprim(s) {
+  const v = vocab(s);
+  return {
+    title: `Оплата ${s.name} из России — билеты на достопримечательность`,
+    description: `Оплата достопримечательности ${s.name} из России: входные билеты, проход без очереди, экскурсии. Оплачиваем с зарубежной карты, присылаем билеты.`,
+    h1: `Оплата ${s.name} из России — билеты и вход`,
+    body: `
+      <section class="block">
+        <p class="lead">${s.name} — ${s.hint}. Вход и экскурсии бронируются на зарубежном сайте по сеансам, а карта РФ там не проходит. Мы оплачиваем посещение за вас.</p>
+      </section>
+
+      <section class="block">
+        <h2>Что можно оплатить</h2>
+        <p>${v.whatPay}.</p>
+        ${tiersBlock(s, `Варианты посещения ${s.name}:`)}
+      </section>
+
+      <section class="block">
+        <h2>Какие данные нужны</h2>
+        <ul class="check">${v.data.map((d) => `<li>${d}</li>`).join('')}</ul>
+      </section>
+
+      <section class="block">
+        <h2>Можно ли оплатить картой РФ</h2>
+        <p>${v.rfCard}</p>
+      </section>
+
+      <section class="block cta">
+        <h2>Оплатить посещение ${s.name}</h2>
+        <a class="btn-primary" href="https://payoplata.ru/#popupforma">Оформить заявку</a>
+        <p class="hint">${v.time}.</p>
+      </section>
+    `,
+    faq: [
+      { q: `Как оплатить билеты в ${s.name} из России?`, a: `Оставьте заявку с датой и количеством билетов — оплачиваем с зарубежной карты, присылаем ${v.receive}.` },
+      { q: `Можно ли картой РФ?`, a: v.rfCard },
+      { q: `Сколько занимает?`, a: v.time },
+    ],
+  };
+}
+
+// ---------- Shop-specific renderer ----------
+
+function oplataMagazina(s) {
+  const v = vocab(s);
+  return {
+    title: `Оплата заказа на ${s.name} из России — оплатим вашу корзину`,
+    description: `Как оплатить заказ на ${s.name} из России: оплачиваем корзину с зарубежной карты, помогаем с доставкой. Какие данные нужны и сколько занимает.`,
+    h1: `Как оплатить заказ на ${s.name} из России`,
+    body: `
+      <section class="block">
+        <p class="lead">${s.name} — ${s.hint}. Магазин не принимает карты РФ, а часто и не доставляет в Россию напрямую. Мы оплачиваем ваш заказ и помогаем довезти его до вас.</p>
+      </section>
+
+      <section class="block">
+        <h2>Что мы оплачиваем</h2>
+        <p>${v.whatPay}.</p>
+        ${tiersBlock(s, `Что оформляют на ${s.name}:`)}
+      </section>
+
+      <section class="block">
+        <h2>Какие данные нужны</h2>
+        <ul class="check">${v.data.map((d) => `<li>${d}</li>`).join('')}</ul>
+      </section>
+
+      <section class="block">
+        <h2>Как проходит оплата заказа</h2>
+        <ol class="steps">
+          <li>Вы присылаете ссылки на товары или корзину ${s.name}.</li>
+          <li>Считаем итог в рублях с доставкой.</li>
+          <li>Вы оплачиваете нам, мы — заказ с зарубежной карты.</li>
+          <li>Вы получаете ${v.receive}.</li>
+        </ol>
+      </section>
+
+      <section class="block">
+        <h2>Можно ли оплатить картой РФ</h2>
+        <p>${v.rfCard}</p>
+      </section>
+
+      <section class="block cta">
+        <h2>Оплатить заказ на ${s.name}</h2>
+        <a class="btn-primary" href="https://payoplata.ru/#popupforma">Оформить заявку</a>
+        <p class="hint">${v.time}.</p>
+      </section>
+    `,
+    faq: [
+      { q: `Как оплатить заказ на ${s.name} из России?`, a: `Пришлите корзину — оплатим с зарубежной карты и поможем с доставкой.` },
+      { q: `Можно ли оплатить ${s.name} картой РФ?`, a: v.rfCard },
+      { q: `Доставите ли в Россию?`, a: `Поможем с доставкой напрямую или через посредника/склад — обсуждаем при оформлении.` },
+    ],
+  };
+}
+
+// ---------- Gift card-specific renderer ----------
+
+function kupitGiftCard(s) {
+  const v = vocab(s);
+  const baseName = s.name.replace(/\s*Gift Card$/i, '');
+  return {
+    title: `Купить ${s.name} из России — код сразу после оплаты | PlataPay`,
+    description: `Купить ${s.name} из России: подарочная карта нужного региона, код в Telegram или на почту за 5–30 минут. Любой номинал, оплата рублями.`,
+    h1: `Купить ${s.name} из России`,
+    body: `
+      <section class="block">
+        <p class="lead">${s.name} — ${s.hint}. С российской карты купить карту нужного региона не выйдет, а «чужой» регион не активируется. Мы покупаем правильную карту и присылаем код.</p>
+      </section>
+
+      <section class="block">
+        <h2>Номиналы</h2>
+        <p>Покупаем ${v.whatPay}.</p>
+        ${tiersBlock(s, `Доступные номиналы ${baseName}:`)}
+      </section>
+
+      <section class="block">
+        <h2>Что нужно от вас</h2>
+        <ul class="check">${v.data.map((d) => `<li>${d}</li>`).join('')}</ul>
+      </section>
+
+      <section class="block">
+        <h2>Как проходит покупка</h2>
+        <ol class="steps">
+          <li>Вы выбираете номинал и регион карты.</li>
+          <li>Согласуем сумму в рублях.</li>
+          <li>Вы оплачиваете нам — СБП, карта РФ или перевод.</li>
+          <li>Мы покупаем карту и присылаем ${v.receive}.</li>
+        </ol>
+      </section>
+
+      <section class="block">
+        <h2>Можно ли купить картой РФ</h2>
+        <p>${v.rfCard}</p>
+      </section>
+
+      <section class="block cta">
+        <h2>Купить ${s.name}</h2>
+        <a class="btn-primary" href="https://payoplata.ru/#popupforma">Оформить заявку</a>
+        <p class="hint">${v.time}.</p>
+      </section>
+    `,
+    faq: [
+      { q: `Как купить ${s.name} из России?`, a: `Выберите номинал и регион — пришлём код в Telegram или на почту после оплаты.` },
+      { q: `Какой регион карты выбрать?`, a: `Тот, в котором зарегистрирован ваш аккаунт ${baseName}. Подскажем при оформлении.` },
+      { q: `Когда придёт код?`, a: v.time },
+    ],
+  };
+}
+
+// ---------- Game asset-specific renderer ----------
+
+function kupitAsset(s) {
+  const v = vocab(s);
+  return {
+    title: `Купить ассет на ${s.name} из России — оплата с зарубежной карты`,
+    description: `Как купить ассет или 3D-модель на ${s.name} из России: оплачиваем с зарубежной карты на ваш аккаунт, лицензия оформлена на вас. Что нужно и сколько занимает.`,
+    h1: `Купить ассет на ${s.name} из России`,
+    body: `
+      <section class="block">
+        <p class="lead">${s.name} — ${s.hint}. Маркетплейс принимает только западные карты, поэтому купить ассет, 3D-модель или модель для игры со своей карты не получится. Мы оплачиваем покупку на ваш аккаунт.</p>
+      </section>
+
+      <section class="block">
+        <h2>Что можно купить</h2>
+        <p>${v.whatPay}.</p>
+        ${tiersBlock(s, `Что оформляют на ${s.name}:`)}
+      </section>
+
+      <section class="block">
+        <h2>Какие данные нужны</h2>
+        <ul class="check">${v.data.map((d) => `<li>${d}</li>`).join('')}</ul>
+      </section>
+
+      <section class="block">
+        <h2>Как проходит покупка</h2>
+        <ol class="steps">
+          <li>Пришлите ссылку на ассет или 3D-модель.</li>
+          <li>Согласуем сумму в рублях.</li>
+          <li>Вы оплачиваете нам, мы — покупку с зарубежной карты.</li>
+          <li>Вы получаете ${v.receive}.</li>
+        </ol>
+      </section>
+
+      <section class="block">
+        <h2>Можно ли оплатить картой РФ</h2>
+        <p>${v.rfCard}</p>
+      </section>
+
+      <section class="block cta">
+        <h2>Купить ассет на ${s.name}</h2>
+        <a class="btn-primary" href="https://payoplata.ru/#popupforma">Оформить заявку</a>
+        <p class="hint">${v.time}.</p>
+      </section>
+    `,
+    faq: [
+      { q: `Как купить ассет на ${s.name} из России?`, a: `Пришлите ссылку на ассет — оплатим с зарубежной карты на ваш аккаунт.` },
+      { q: `Лицензия будет на меня?`, a: `Да. Покупка появляется в вашей библиотеке, лицензия оформлена на ваш аккаунт.` },
+      { q: `Можно ли картой РФ?`, a: v.rfCard },
+    ],
+  };
+}
+
+// ---------- "За границей" universal renderer (shops/assets/tickets) ----------
+
+function zaGranicey(s) {
+  const cat = CATEGORIES[s.cat];
+  const v = vocab(s);
+  return {
+    title: `${s.name} — оплата за границей из России в ${YEAR}`,
+    description: `Оплата ${s.name} за границей из России: оплачиваем ${v.thingAcc} с зарубежной карты на ваше имя. Без иностранной карты, оплата рублями.`,
+    h1: `${s.name} — оплата за границей из России`,
+    body: `
+      <section class="block">
+        <p class="lead">Покупки и оплата за границей через ${s.name} упираются в одно — карта РФ там не принимается. ${s.name} — ${s.hint}. Мы оплачиваем за вас с зарубежной карты, вы платите рублями.</p>
+      </section>
+
+      <section class="block">
+        <h2>Что можно оплатить за границей</h2>
+        <p>${v.whatPay}. ${cat.workaround}</p>
+        ${tiersBlock(s, `Популярные варианты на ${s.name}:`)}
+      </section>
+
+      <section class="block">
+        <h2>Почему не проходит карта РФ</h2>
+        <p>${v.rfCard}</p>
+      </section>
+
+      <section class="block">
+        <h2>Как оплатить</h2>
+        <ol class="steps">
+          <li>Вы присылаете, что нужно оплатить на ${s.name}.</li>
+          <li>Согласуем сумму в рублях.</li>
+          <li>Вы платите нам, мы оплачиваем ${v.thingAcc} за границей.</li>
+          <li>Вы получаете ${v.receive}.</li>
+        </ol>
+      </section>
+
+      <section class="block cta">
+        <h2>Оплатить ${s.name} за границей</h2>
+        <a class="btn-primary" href="https://payoplata.ru/#popupforma">Оформить заявку</a>
+        <p class="hint">${v.time}.</p>
+      </section>
+    `,
+    faq: [
+      { q: `Как оплатить ${s.name} за границей из России?`, a: `Оставьте заявку — оплачиваем с зарубежной карты, вы платите рублями и получаете ${v.receive}.` },
+      { q: `Нужна ли иностранная карта?`, a: `Нет. Карта нужна нам, а не вам — вы платите рублями удобным способом.` },
+      { q: `Сколько занимает?`, a: v.time },
+    ],
+  };
+}
+
+export const NEW_RENDERERS = {
+  oplata: gOplata,
+  kak: gKak,
+  rf: gRf,
+  cena: gCena,
+  year: gYear,
+  'kupit-bilet': kupitBilet,
+  'oplata-biletov': oplataBiletov,
+  'oplata-dostoprimechatelnosti': oplataDostoprim,
+  'oplata-magazina': oplataMagazina,
+  'kupit-gift-card': kupitGiftCard,
+  'kupit-asset': kupitAsset,
+  'za-granicey': zaGranicey,
+};
+
 export { faqBlock, relatedLinks };

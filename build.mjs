@@ -21,6 +21,7 @@ import path from 'node:path';
 import { buildEnhancement } from './seo/enhance.mjs';
 import { buildPricingUiPatch } from './seo/pricing-ui.mjs';
 import { patchStaticPrices } from './seo/static-pricing-patch.mjs';
+import { SERVICES as CAT_SERVICES, CATEGORIES as CAT_CATEGORIES } from './seo/data.mjs';
 
 const SRC = 'tilda-original';
 const OUT = 'out';
@@ -78,6 +79,66 @@ const searchLayoutFix = `
 })();
 </script>
 `;
+
+// Inject the new verticals (tickets, shops, gift cards, game assets)
+// into the catalog page's hand-written SERVICES / CATS / domains arrays.
+// No-op on any page that doesn't carry those markers (i.e. everything
+// except the catalog), so it's safe to run from the shared patchPage.
+function buildCatalogInjection() {
+  const KIND_DESC = {
+    ticket: 'Билеты и вход',
+    shop: 'Оплата заказа',
+    giftcard: 'Подарочная карта',
+    asset: 'Ассеты и 3D',
+  };
+  const newServices = CAT_SERVICES.filter(
+    (s) => CAT_CATEGORIES[s.cat] && CAT_CATEGORIES[s.cat].kind,
+  );
+  const servicesJs = newServices
+    .map((s) => {
+      const desc = KIND_DESC[CAT_CATEGORIES[s.cat].kind] || 'Оплата';
+      return `    {name:"${s.name}", desc:"${desc}", price:"650 ₽", cat:"${s.cat}", url:"/#popupforma"},`;
+    })
+    .join('\n');
+  const domainsJs = newServices
+    .filter((s) => s.domain)
+    .map((s) => `    "${s.name}":"${s.domain}",`)
+    .join('\n');
+  const newCats = Object.entries(CAT_CATEGORIES)
+    .filter(([, c]) => c.kind)
+    .map(([key, c]) => `    {key:"${key}", label:"${c.label || c.title}"},`)
+    .join('\n');
+  return { servicesJs, domainsJs, newCats };
+}
+
+const CATALOG_INJECTION = buildCatalogInjection();
+
+function patchCatalogVerticals(html) {
+  // Only touch the catalog page (it has the CATS array + domains map).
+  if (!html.includes('const CATS = [') || html.includes('label:"Gift Cards"')) {
+    return html;
+  }
+
+  // 1) New service cards.
+  html = html.replace(
+    '  ];\n\n  // домены для favicon (сервисы без slug)',
+    `${CATALOG_INJECTION.servicesJs}\n  ];\n\n  // домены для favicon (сервисы без slug)`,
+  );
+
+  // 2) New favicon domains so the cards show real brand logos via Clearbit.
+  html = html.replace(
+    '    "App Store":"apple.com"\n  };',
+    `    "App Store":"apple.com",\n${CATALOG_INJECTION.domainsJs}\n  };`,
+  );
+
+  // 3) New category filter buttons.
+  html = html.replace(
+    '    {key:"Маркет",      label:"Маркетплейсы"},\n  ];',
+    `    {key:"Маркет",      label:"Маркетплейсы"},\n${CATALOG_INJECTION.newCats}\n  ];`,
+  );
+
+  return html;
+}
 
 function verifyTags() {
   let s = '';
@@ -294,6 +355,10 @@ function patchPage(html, isHome) {
   // 3) Keep the catalog search usable on mobile Safari and add a clear button.
   html = patchCatalogSearch(html);
 
+  // 3.5) Add the new verticals (tickets, shops, gift cards, assets) to the
+  //      catalog's services / categories / favicon domains.
+  html = patchCatalogVerticals(html);
+
   // 4) Replace hardcoded card prices with calculated prices before the page is written.
   html = patchStaticPrices(html);
 
@@ -324,16 +389,27 @@ for (const { src, dest, isHome } of PAGES) {
 }
 
 // ---------------- SEO landing pages ----------------
-const { SERVICES: SEO_SERVICES, INTENTS } = await import('./seo/data.mjs');
-const { RENDERERS } = await import('./seo/templates.mjs');
+const { SERVICES: SEO_SERVICES, INTENTS, intentsForService, kindOf, CATEGORIES: CATEGORIES_MAP } = await import('./seo/data.mjs');
+const { RENDERERS, NEW_RENDERERS } = await import('./seo/templates.mjs');
 const { renderPage } = await import('./seo/layout.mjs');
+
+// Pick the right intent list + renderer set for a service. Original
+// subscription services use the legacy six intents/renderers untouched;
+// the new verticals (tickets, shops, gift cards, assets) use their own
+// curated, kind-aware ones.
+function plan(service) {
+  const intents = intentsForService(service);
+  const renderers = kindOf(service.cat) === 'subscription' ? RENDERERS : NEW_RENDERERS;
+  return { intents, renderers };
+}
 
 const seoUrls = [];
 let seoCount = 0;
 for (const service of SEO_SERVICES) {
-  for (const intent of INTENTS) {
-    const page = RENDERERS[intent.key](service, INTENTS);
-    const html = renderPage({ base: BASE_HREF, page, service, intent, intents: INTENTS, verifyTags: verifyTags(), pricingUi: pricingUiPatch });
+  const { intents, renderers } = plan(service);
+  for (const intent of intents) {
+    const page = renderers[intent.key](service, intents);
+    const html = renderPage({ base: BASE_HREF, page, service, intent, intents, verifyTags: verifyTags(), pricingUi: pricingUiPatch });
     const slug = intent.slug(service.slug);
     const dir = path.join(OUT, slug);
     fs.mkdirSync(dir, { recursive: true });
@@ -378,15 +454,17 @@ ${verifyTags()}
 <div class="wrap">
 <a class="home" href="${BASE_HREF}">← На главную</a>
 <h1>Все сервисы и материалы</h1>
-<p class="sub">${SEO_SERVICES.length} сервисов × ${INTENTS.length} материалов = ${seoCount} страниц. Выберите сервис и тип материала.</p>
+<p class="sub">${SEO_SERVICES.length} сервисов и направлений · ${seoCount} страниц. Выберите сервис и тип материала.</p>
 ${Object.entries(grouped).map(([cat, list]) => `
-  <h2>${cat}</h2>
-  ${list.map((s) => `
+  <h2>${(CATEGORIES_MAP[cat] && CATEGORIES_MAP[cat].title) || cat}</h2>
+  ${list.map((s) => {
+    const its = intentsForService(s);
+    return `
     <div class="svc">
       <h3>${s.name}</h3>
-      ${INTENTS.map((i) => `<a href="${BASE_HREF}${i.slug(s.slug)}/">${i.title} ${s.name}</a>`).join('')}
-    </div>
-  `).join('')}
+      ${its.map((i) => `<a href="${BASE_HREF}${i.slug(s.slug)}/">${i.title} ${s.name}</a>`).join('')}
+    </div>`;
+  }).join('')}
 `).join('')}
 </div>
 </body></html>`;

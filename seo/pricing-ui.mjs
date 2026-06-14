@@ -26,6 +26,10 @@ const CATEGORY_ACCENTS = {
   Обучение: '#10b981',
   Путешествия: '#14b8a6',
   Маркет: '#ef4444',
+  Билеты: '#e11d48',
+  Магазины: '#0ea5e9',
+  GiftCards: '#f43f5e',
+  Ассеты: '#8b5cf6',
 };
 
 // Per-service brand colors so the tariff cards are dressed in the design
