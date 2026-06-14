@@ -245,6 +245,18 @@ ${verifyTags()}
 // .nojekyll so GitHub Pages serves _next-style files too
 fs.writeFileSync(path.join(OUT, '.nojekyll'), '');
 
+// CNAME so the GitHub Pages custom domain stays bound on every Actions
+// deploy. Without it the domain lives only in Pages settings and an
+// Actions deploy can fail to reflect on the custom domain (site serves
+// stale/old content). Only emitted for the root build (BASE === ''),
+// which is exactly when configure-pages reports a custom domain — so the
+// asset base path and the CNAME never disagree.
+const CUSTOM_DOMAIN = process.env.CUSTOM_DOMAIN || 'payoplata.ru';
+if (BASE === '' && CUSTOM_DOMAIN) {
+  fs.writeFileSync(path.join(OUT, 'CNAME'), `${CUSTOM_DOMAIN}\n`);
+  console.log(`CNAME: ${CUSTOM_DOMAIN}`);
+}
+
 function patchCatalogSearch(html) {
   if (!html.includes('id="ppSearch"')) return html;
 
