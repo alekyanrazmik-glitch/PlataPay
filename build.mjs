@@ -306,7 +306,10 @@ function patchPage(html, isHome) {
   html = html.replace(/<div class="t-tildalabel[\s\S]*?<\/a>\s*<\/div>/gi, '');
 
   // 6) Inject our mini order form, search autocomplete, layout fixes and pricing UI just before </body>.
-  html = html.replace('</body>', `${pricingUiPatch}${enhanceInject}${searchLayoutFix}</body>`);
+  // Use a function replacer: the injected scripts contain "$'" and other
+  // "$" sequences that String.replace would otherwise treat as special
+  // replacement patterns and corrupt.
+  html = html.replace('</body>', () => `${pricingUiPatch}${enhanceInject}${searchLayoutFix}</body>`);
 
   return html;
 }
@@ -330,7 +333,7 @@ let seoCount = 0;
 for (const service of SEO_SERVICES) {
   for (const intent of INTENTS) {
     const page = RENDERERS[intent.key](service, INTENTS);
-    const html = renderPage({ base: BASE_HREF, page, service, intent, intents: INTENTS, verifyTags: verifyTags() });
+    const html = renderPage({ base: BASE_HREF, page, service, intent, intents: INTENTS, verifyTags: verifyTags(), pricingUi: pricingUiPatch });
     const slug = intent.slug(service.slug);
     const dir = path.join(OUT, slug);
     fs.mkdirSync(dir, { recursive: true });

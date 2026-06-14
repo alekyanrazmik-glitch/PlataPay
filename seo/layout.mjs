@@ -11,6 +11,7 @@ export function renderPage({
   intent,
   intents,
   verifyTags = '',
+  pricingUi = '', // branded tariff-card modal + form, injected before </body>
 }) {
   const canonical = `https://payoplata.ru/${intent.slug(service.slug)}/`;
   const faqLd = page.faq && page.faq.length
@@ -260,6 +261,8 @@ ${faqLd}
     </div>
   </div>
 </footer>
+<script>window.PP_PAGE_SERVICE=${JSON.stringify(service.slug)};</script>
+${pricingUi}
 </body>
 </html>`;
 }
