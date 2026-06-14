@@ -34,6 +34,48 @@ export const GOOGLE_VERIFY = process.env.GOOGLE_VERIFY || '';
 
 const enhanceInject = buildEnhancement(BASE_HREF);
 
+const searchLayoutFix = `
+<style id="pp-search-layout-fix">
+  .pp-search-form .pp-ac-wrap,
+  .pp-search .pp-ac-wrap{flex:1 1 auto !important;min-width:0 !important;display:block !important;}
+  .pp-search-form .pp-ac-wrap input,
+  .pp-search .pp-ac-wrap input{width:100% !important;}
+  .pp-search-form{cursor:text;}
+  .pp-search-form .pp-search-ico,
+  .pp-search .pp-search-ico{pointer-events:none;}
+</style>
+<script>
+(function(){
+  function focusInput(input){
+    if(!input) return;
+    try{ input.focus({preventScroll:true}); }catch(e){ input.focus(); }
+    if(typeof input.setSelectionRange==='function'){
+      var len=input.value.length;
+      try{ input.setSelectionRange(len,len); }catch(e){}
+    }
+  }
+  function wireSearchFocus(root){
+    var input=root.querySelector('input[name="q"], #ppSearch, input[placeholder*="ChatGPT"], input[placeholder*="Найти"]');
+    if(!input || root.dataset.ppFocusFix) return;
+    root.dataset.ppFocusFix='1';
+    ['click','touchend'].forEach(function(evt){
+      root.addEventListener(evt,function(e){
+        if(e.target===input || e.target.closest('button,a')) return;
+        if(evt==='touchend') e.preventDefault();
+        focusInput(input);
+      }, {passive:false});
+    });
+  }
+  function init(){
+    document.querySelectorAll('.pp-search-form,.pp-search').forEach(wireSearchFocus);
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init); else init();
+  setTimeout(init,500);
+  setTimeout(init,1500);
+})();
+</script>
+`;
+
 function verifyTags() {
   let s = '';
   if (YANDEX_VERIFY) s += `<meta name="yandex-verification" content="${YANDEX_VERIFY}">`;
@@ -257,8 +299,8 @@ function patchPage(html, isHome) {
   );
   html = html.replace(/<div class="t-tildalabel[\s\S]*?<\/a>\s*<\/div>/gi, '');
 
-  // 5) Inject our mini order form + search autocomplete just before </body>.
-  html = html.replace('</body>', `${enhanceInject}</body>`);
+  // 5) Inject our mini order form + search autocomplete and search layout fixes just before </body>.
+  html = html.replace('</body>', `${enhanceInject}${searchLayoutFix}</body>`);
 
   return html;
 }
