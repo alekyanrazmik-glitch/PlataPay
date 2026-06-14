@@ -16,7 +16,7 @@ const LOGO_BASE = 'https://raw.githubusercontent.com/alekyanrazmik-glitch/Just-P
 // Reviews live on Avito — set the real profile/reviews URL here (or via
 // the AVITO_URL env var at build time). The cards below mirror Avito
 // reviews and the section links straight to the Avito profile.
-const AVITO_URL = process.env.AVITO_URL || 'https://www.avito.ru/';
+const AVITO_URL = process.env.AVITO_URL || 'https://www.avito.ru/user/0458b806c10e79c5e618d6625d9eed1f/profile?src=sharing';
 
 function esc(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
