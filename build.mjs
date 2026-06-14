@@ -192,6 +192,7 @@ for (const { src, dest, isHome } of PAGES) {
 const { SERVICES: SEO_SERVICES, INTENTS } = await import('./seo/data.mjs');
 const { RENDERERS } = await import('./seo/templates.mjs');
 const { renderPage } = await import('./seo/layout.mjs');
+const { CITIES, geoPage } = await import('./seo/geo.mjs');
 
 const seoUrls = [];
 let seoCount = 0;
@@ -243,7 +244,7 @@ ${verifyTags()}
 <div class="wrap">
 <a class="home" href="${BASE_HREF}">← На главную</a>
 <h1>Все сервисы и материалы</h1>
-<p class="sub">${SEO_SERVICES.length} сервисов × ${INTENTS.length} материалов = ${seoCount} страниц. Выберите сервис и тип материала.</p>
+<p class="sub">${SEO_SERVICES.length} сервисов × ${INTENTS.length} материалов = ${seoCount} страниц. Выберите сервис и тип материала. Ищете оплату в своём городе? <a href="${BASE_HREF}geo/">Оплата по городам России →</a></p>
 ${Object.entries(grouped).map(([cat, list]) => `
   <h2>${cat}</h2>
   ${list.map((s) => `
@@ -258,6 +259,97 @@ ${Object.entries(grouped).map(([cat, list]) => `
 fs.mkdirSync(path.join(OUT, 'seo'), { recursive: true });
 fs.writeFileSync(path.join(OUT, 'seo', 'index.html'), hub);
 seoUrls.push('https://payoplata.ru/seo/');
+
+// ---------------- Geo landing pages (service × city) ----------------
+// One "оплата <сервис> в <городе>" page per service per city. Reuses
+// the shared SEO shell via a synthetic intent so the look, order form
+// and FAQ schema stay identical to the rest of the SEO pages.
+let geoCount = 0;
+for (const service of SEO_SERVICES) {
+  for (const city of CITIES) {
+    const page = geoPage(service, city, CITIES);
+    const intent = { key: 'geo', slug: () => page.slug, title: 'Оплата' };
+    const html = renderPage({ base: BASE_HREF, page, service, intent, intents: INTENTS, verifyTags: verifyTags() });
+    const dir = path.join(OUT, page.slug);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'index.html'), html);
+    seoUrls.push(`https://payoplata.ru/${page.slug}/`);
+    geoCount++;
+  }
+}
+console.log(`built ${geoCount} geo pages (${SEO_SERVICES.length} services × ${CITIES.length} cities)`);
+
+// Per-city hubs at /geo/<city>/ — list every service payable in that
+// city, plus a /geo/ index of all cities. This is the crawlable spine
+// that lets search engines reach all geo landings without one giant
+// link page.
+const geoHubStyle = `<style>
+  :root{color-scheme:dark;}
+  body{margin:0;background:#08172F;color:#eef3ff;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',system-ui,sans-serif;}
+  .wrap{max-width:1080px;margin:0 auto;padding:32px 24px;}
+  h1{font-size:34px;font-weight:600;letter-spacing:-.02em;margin:0 0 12px;}
+  .sub{color:#9fb2d4;margin-bottom:32px;}
+  h2{font-size:20px;margin:32px 0 12px;color:#7BAEFF;}
+  .svc{background:#0c1f40;border:1px solid #16315f;border-radius:14px;padding:14px 16px;margin-bottom:10px;}
+  .svc h3{margin:0 0 8px;font-size:16px;}
+  .grid{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));}
+  .grid a{display:block;padding:10px 12px;background:#0c1f40;border:1px solid #16315f;border-radius:10px;font-size:14px;color:#cfd9ef;}
+  .grid a:hover{border-color:#2e7bff;color:#eef3ff;}
+  a{color:#7BAEFF;text-decoration:none;}
+  a.home{display:inline-block;margin-bottom:16px;color:#9fb2d4;font-size:14px;}
+</style>`;
+
+for (const city of CITIES) {
+  const cityGrouped = {};
+  for (const s of SEO_SERVICES) (cityGrouped[s.cat] ||= []).push(s);
+  const cityHub = `<!doctype html>
+<html lang="ru"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<base href="${BASE_HREF}">
+<title>Оплата зарубежных сервисов ${city.prep} — PlataPay</title>
+<meta name="description" content="Оплата подписок и зарубежных сервисов ${city.prep} (${city.region}): ${SEO_SERVICES.length} сервисов, оплата с карты РФ за 5–15 минут онлайн.">
+<link rel="canonical" href="https://payoplata.ru/geo/${city.slug}/">
+${verifyTags()}
+${geoHubStyle}
+</head><body>
+<div class="wrap">
+<a class="home" href="geo/">← Все города</a>
+<h1>Оплата сервисов ${city.prep}</h1>
+<p class="sub">${city.region}. Оплачиваем ${SEO_SERVICES.length} зарубежных сервисов из ${city.name} онлайн — с зарубежной карты на ваш аккаунт за 5–15 минут.</p>
+${Object.entries(cityGrouped).map(([cat, list]) => `
+  <h2>${cat}</h2>
+  <div class="grid">
+    ${list.map((s) => `<a href="oplata-${s.slug}-${city.slug}/">Оплата ${s.name} ${city.prep}</a>`).join('')}
+  </div>
+`).join('')}
+</div>
+</body></html>`;
+  fs.mkdirSync(path.join(OUT, 'geo', city.slug), { recursive: true });
+  fs.writeFileSync(path.join(OUT, 'geo', city.slug, 'index.html'), cityHub);
+  seoUrls.push(`https://payoplata.ru/geo/${city.slug}/`);
+}
+
+const geoIndex = `<!doctype html>
+<html lang="ru"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<base href="${BASE_HREF}">
+<title>Оплата зарубежных сервисов по городам России — PlataPay</title>
+<meta name="description" content="Оплата подписок и зарубежных сервисов в ${CITIES.length} городах России. Выберите свой город — оплата с карты РФ за 5–15 минут онлайн.">
+<link rel="canonical" href="https://payoplata.ru/geo/">
+${verifyTags()}
+${geoHubStyle}
+</head><body>
+<div class="wrap">
+<a class="home" href="${BASE_HREF}">← На главную</a>
+<h1>Оплата сервисов по городам России</h1>
+<p class="sub">${CITIES.length} городов × ${SEO_SERVICES.length} сервисов. Выберите город — оплачиваем зарубежные подписки из любого региона России онлайн.</p>
+<div class="grid">
+  ${CITIES.map((c) => `<a href="geo/${c.slug}/">${c.name}</a>`).join('')}
+</div>
+</div>
+</body></html>`;
+fs.writeFileSync(path.join(OUT, 'geo', 'index.html'), geoIndex);
+seoUrls.push('https://payoplata.ru/geo/');
 
 // Rewrite sitemap.xml so search engines actually find the new pages.
 const baseUrls = [
