@@ -22,7 +22,6 @@ import { buildEnhancement } from './seo/enhance.mjs';
 import { buildPricingUiPatch } from './seo/pricing-ui.mjs';
 import { patchStaticPrices } from './seo/static-pricing-patch.mjs';
 import { SERVICES as CAT_SERVICES, CATEGORIES as CAT_CATEGORIES } from './seo/data.mjs';
-import { renderHome } from './seo/home.mjs';
 
 const SRC = 'tilda-original';
 const OUT = 'out';
@@ -166,9 +165,8 @@ function verifyTags() {
   return s;
 }
 
-// Home is rebuilt from scratch via seo/home.mjs (modern SaaS landing).
-// The other three stay as the patched Tilda exports.
 const PAGES = [
+  { src: 'page142115676.html', dest: 'index.html', isHome: true },
   { src: 'page143711326.html', dest: 'catalog/index.html' },
   { src: 'page144727686.html', dest: 'faq/index.html' },
   { src: 'page144877396.html', dest: 'contacts/index.html' },
@@ -422,17 +420,6 @@ for (const { src, dest, isHome } of PAGES) {
   fs.writeFileSync(outPath, patched);
   console.log(`built ${dest}`);
 }
-
-// Home page — rebuilt from scratch. Carries the same injected pieces as
-// the Tilda pages (mini order form + Telegram/Sheets, search autocomplete,
-// pricing modal, search layout fix) so CTAs, search and cards all work.
-const homeHtml = renderHome({
-  base: BASE_HREF,
-  verifyTags: verifyTags(),
-  inject: `${pricingUiPatch}${enhanceInject}${searchLayoutFix}`,
-});
-fs.writeFileSync(path.join(OUT, 'index.html'), homeHtml);
-console.log('built index.html (new home)');
 
 // ---------------- SEO landing pages ----------------
 const { SERVICES: SEO_SERVICES, INTENTS, intentsForService, kindOf, CATEGORIES: CATEGORIES_MAP } = await import('./seo/data.mjs');
