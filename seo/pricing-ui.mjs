@@ -244,20 +244,33 @@ export function buildPricingUiPatch() {
     var n = card.querySelector && card.querySelector('.pp-name,.pp-pc-name,h3,h4');
     return n ? n.textContent.trim() : '';
   }
+  var ppObserver=null, ppHydrateScheduled=false;
   function updateCardPrice(card,s){
     var priceBox = card.querySelector('.pp-price,.pp-pc-price');
-    if(priceBox && s && s.cardDisplay){ priceBox.innerHTML = '<b>'+escapeHtml(s.cardDisplay)+'</b>'; }
+    if(!priceBox || !s || !s.cardDisplay) return;
+    var html='<b>'+escapeHtml(s.cardDisplay)+'</b>';
+    // Only write when the value actually changes. Writing innerHTML on
+    // every pass would trigger the MutationObserver below and spin into
+    // an infinite reflow loop that freezes the page.
+    if(priceBox.innerHTML!==html) priceBox.innerHTML=html;
   }
   function hydrateCards(){
+    if(ppObserver) ppObserver.disconnect();
     document.querySelectorAll('.pp-card,.pp-pc').forEach(function(card){
       if(card.classList.contains('pp-cta')) return;
-      var s = findService(serviceNameFromCard(card));
+      var s = (card.dataset.ppPricing && SERVICES.find(function(x){return x.slug===card.dataset.ppPricing;})) || findService(serviceNameFromCard(card));
       if(!s) return;
       card.dataset.ppPricing = s.slug;
       updateCardPrice(card,s);
       var link = card.querySelector('a[href*="#popupforma"],a[href*="popupforma"]');
       if(link){ link.setAttribute('href','#pp-tariffs'); link.setAttribute('role','button'); }
     });
+    if(ppObserver) ppObserver.observe(document.body,{childList:true,subtree:true});
+  }
+  function scheduleHydrate(){
+    if(ppHydrateScheduled) return;
+    ppHydrateScheduled=true;
+    setTimeout(function(){ ppHydrateScheduled=false; hydrateCards(); },250);
   }
   function setAccent(s){
     modal.style.setProperty('--svc-accent', s.accent || '#2e7bff');
@@ -448,7 +461,10 @@ export function buildPricingUiPatch() {
   setTimeout(hydrateCards,300);
   setTimeout(hydrateCards,1000);
   setTimeout(hydrateCards,2000);
-  if(window.MutationObserver){ new MutationObserver(function(){ hydrateCards(); }).observe(document.body,{childList:true,subtree:true}); }
+  if(window.MutationObserver){
+    ppObserver=new MutationObserver(scheduleHydrate);
+    ppObserver.observe(document.body,{childList:true,subtree:true});
+  }
 })();
 </script>
 `;
