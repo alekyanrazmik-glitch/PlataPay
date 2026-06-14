@@ -20,11 +20,22 @@ function rubFromUsd(usd) {
   return Math.round(usd * RATE_RUB_PER_USD + SERVICE_FEE_RUB);
 }
 
+function cleanPlanName(tier) {
+  const text = String(tier || '').trim();
+  const noPrice = text.replace(/\s*\([^)]*\$[^)]*\)\s*/g, '').replace(/\s*\$\s*\d+(?:[.,]\d+)?\s*/g, '').trim();
+  return noPrice || text || 'Тариф';
+}
+
 function tierToData(tier) {
   const label = String(tier || '').trim() || 'Индивидуальный тариф';
   const match = label.match(/\$\s*(\d+(?:[.,]\d+)?)/);
   const usd = match ? Number(match[1].replace(',', '.')) : null;
-  return { label, usd, rub: usd === null ? null : rubFromUsd(usd) };
+  return {
+    label,
+    plan: cleanPlanName(label),
+    usd,
+    rub: usd === null ? null : rubFromUsd(usd),
+  };
 }
 
 function norm(s) {
@@ -34,9 +45,14 @@ function norm(s) {
     .replace(/[^a-zа-я0-9]+/gi, '');
 }
 
+function formatRub(value) {
+  return new Intl.NumberFormat('ru-RU').format(value) + ' ₽';
+}
+
 const pricingServices = SERVICES.map((service) => {
   const tiers = (service.tiers?.length ? service.tiers : ['Индивидуальный тариф']).map(tierToData);
-  const priced = tiers.filter((tier) => tier.rub !== null);
+  const priced = tiers.filter((tier) => tier.rub !== null).sort((a, b) => a.rub - b.rub);
+  const best = priced[0] || null;
   const aliases = Array.from(new Set([
     service.name,
     service.slug,
@@ -51,7 +67,8 @@ const pricingServices = SERVICES.map((service) => {
     logo: service.logo,
     aliases,
     tiers,
-    minRub: priced.length ? Math.min(...priced.map((tier) => tier.rub)) : null,
+    minRub: best ? best.rub : null,
+    cardDisplay: best ? `${best.plan} — ${formatRub(best.rub)}` : 'по запросу',
   };
 });
 
@@ -130,7 +147,7 @@ export function buildPricingUiPatch() {
   }
   function updateCardPrice(card,s){
     var priceBox = card.querySelector('.pp-price,.pp-pc-price');
-    if(priceBox && s && s.minRub){ priceBox.innerHTML = '<span>от</span> <b>'+money(s.minRub)+'</b>'; }
+    if(priceBox && s && s.cardDisplay){ priceBox.innerHTML = '<b>'+escapeHtml(s.cardDisplay)+'</b>'; }
   }
   function hydrateCards(){
     document.querySelectorAll('.pp-card,.pp-pc').forEach(function(card){
@@ -216,9 +233,7 @@ export function buildPricingUiPatch() {
   setTimeout(hydrateCards,300);
   setTimeout(hydrateCards,1000);
   setTimeout(hydrateCards,2000);
-  if(window.MutationObserver){
-    new MutationObserver(function(){ hydrateCards(); }).observe(document.body,{childList:true,subtree:true});
-  }
+  if(window.MutationObserver){ new MutationObserver(function(){ hydrateCards(); }).observe(document.body,{childList:true,subtree:true}); }
 })();
 </script>
 `;
