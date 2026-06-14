@@ -26,6 +26,18 @@ export function renderPage({
       })}</script>`
     : '';
 
+  // BreadcrumbList so Главная → Каталог → текущая страница shows up as a
+  // rich result and gives crawlers an explicit hierarchy.
+  const breadcrumbLd = `<script type="application/ld+json">${JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Главная', item: 'https://payoplata.ru/' },
+      { '@type': 'ListItem', position: 2, name: 'Каталог', item: 'https://payoplata.ru/catalog/' },
+      { '@type': 'ListItem', position: 3, name: page.h1, item: canonical },
+    ],
+  })}</script>`;
+
   return `<!doctype html>
 <html lang="ru">
 <head>
@@ -43,10 +55,12 @@ export function renderPage({
 <meta property="og:description" content="${escapeAttr(page.description)}">
 <meta property="og:url" content="${canonical}">
 ${verifyTags}
+${breadcrumbLd}
 <style>
   :root { color-scheme: dark; }
   *,*::before,*::after{box-sizing:border-box;}
-  html,body{margin:0;background:#08172F;color:#eef3ff;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','Segoe UI',system-ui,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.55;}
+  html,body{margin:0;background:#08172F;color:#eef3ff;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','Segoe UI',system-ui,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.55;max-width:100%;overflow-x:hidden;}
+  img{max-width:100%;height:auto;}
   a{color:#7BAEFF;text-decoration:none;}
   a:hover{color:#eef3ff;}
   .wrap{max-width:980px;margin:0 auto;padding:24px;}
@@ -109,12 +123,25 @@ ${verifyTags}
   .order .ok{background:#0c1f40;border:1px solid #15A34A;border-radius:14px;padding:24px;text-align:center;}
   .order .ok h3{color:#22C55E;margin-bottom:8px;}
   .order .ok p{color:#cfd9ef;margin:0;}
-  @media (max-width:640px){
-    h1{font-size:28px;}
-    h2{font-size:19px;}
+  /* Accessible tap targets (≥44px) for every interactive control */
+  .btn-primary,.cta-btn,.order button,.order select,.order input,.rel-card{min-height:44px;}
+  @media (max-width:768px){
     nav.top{display:none;}
     .block{padding:18px;}
+  }
+  @media (max-width:640px){
+    .wrap{padding:16px;}
+    h1{font-size:26px;}
+    h2{font-size:19px;}
+    .lead{font-size:16px;}
     .order .row{grid-template-columns:1fr;}
+    .rel-grid{grid-template-columns:1fr;}
+    .crumbs{font-size:12px;}
+  }
+  @media (max-width:380px){
+    h1{font-size:23px;}
+    .wrap{padding:14px;}
+    .block{padding:15px;}
   }
 </style>
 ${faqLd}

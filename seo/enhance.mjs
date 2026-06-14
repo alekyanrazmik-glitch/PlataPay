@@ -24,6 +24,29 @@ export function buildEnhancement(baseHref) {
   }));
 
   return `
+<style id="pp-mobile-hardening">
+  /* Kill horizontal scroll site-wide and keep media within the viewport */
+  html,body{max-width:100%;overflow-x:hidden;}
+  img,svg,video{max-width:100%;}
+  /* No grey tap flash on touch controls */
+  .pp-cat,.pp-card a,.pp-pay a,.pp-cta a{-webkit-tap-highlight-color:transparent;}
+  @media(max-width:768px){
+    .pp-cats{display:flex;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+    .pp-cats::-webkit-scrollbar{display:none;}
+    .pp-cat{flex:0 0 auto;white-space:nowrap;min-height:40px;display:inline-flex;align-items:center;}
+    .pp-sec-grid{grid-template-columns:1fr !important;}
+    .pp-card{width:100% !important;max-width:100% !important;}
+    .pp-card a,.pp-pay a,.pp-cta a{min-height:44px;display:inline-flex;align-items:center;}
+    .pp-search{width:100% !important;max-width:100% !important;}
+    /* 16px input font stops iOS Safari from auto-zooming the page */
+    .pp-search input{min-height:44px;font-size:16px;}
+  }
+  /* PlataPay mini-form modal as a bottom sheet on phones */
+  @media(max-width:520px){
+    .pp-mm-mask{align-items:flex-end !important;padding:0 !important;}
+    .pp-mm-modal{max-width:100% !important;border-radius:20px 20px 0 0 !important;margin:0 !important;padding-bottom:calc(24px + env(safe-area-inset-bottom)) !important;}
+  }
+</style>
 <style>
   .pp-mm-mask{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:99999;display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;}
   .pp-mm-mask[hidden]{display:none;}
