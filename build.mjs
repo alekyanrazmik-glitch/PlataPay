@@ -141,6 +141,24 @@ function patchCatalogVerticals(html) {
   return html;
 }
 
+// Catalog-only visual skin: aligns the cards/chips with the new home page
+// (blue accent, glass surface, hover lift). Purely cosmetic overrides on
+// pp-* classes — no layout dimensions touched. No-op off the catalog.
+function patchCatalogSkin(html) {
+  if (!html.includes('const CATS = [')) return html;
+  const skin = `
+<style id="pp-catalog-skin">
+  .pp-card{background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02)) !important;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);}
+  .pp-card:hover{transform:translateY(-3px);border-color:var(--accent) !important;box-shadow:0 22px 50px -28px rgba(46,123,255,.55) !important;}
+  .pp-cat{border-radius:999px !important;}
+  /* unify the "Оплатить" hover with the brand blue (was neon green) */
+  .pp-pay a:hover,.pp-pay a:hover span{color:#fff !important;}
+  .pp-pay a:hover{background:var(--accent) !important;border-color:var(--accent) !important;}
+  .pp-sec-title{letter-spacing:-.02em;}
+</style>`;
+  return html.replace('</body>', () => `${skin}</body>`);
+}
+
 function verifyTags() {
   let s = '';
   if (YANDEX_VERIFY) s += `<meta name="yandex-verification" content="${YANDEX_VERIFY}">`;
@@ -372,6 +390,9 @@ function patchPage(html, isHome) {
   // 3.5) Add the new verticals (tickets, shops, gift cards, assets) to the
   //      catalog's services / categories / favicon domains.
   html = patchCatalogVerticals(html);
+
+  // 3.6) Cosmetic catalog skin aligned with the new home page.
+  html = patchCatalogSkin(html);
 
   // 4) Replace hardcoded card prices with calculated prices before the page is written.
   html = patchStaticPrices(html);
