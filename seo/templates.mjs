@@ -354,6 +354,164 @@ export function year(s, intents) {
   };
 }
 
-export const RENDERERS = { oplata, kak, rf, cena, sub, year };
+function travelKind(s) {
+  const name = s.name;
+  if (/ticketmaster|eventim/i.test(name)) return 'концерт или мероприятие';
+  if (/getyourguide|klook|viator/i.test(name)) return 'экскурсию или активность';
+  return 'билеты на достопримечательность';
+}
+
+function verticalIntro(s) {
+  if (s.cat === 'Билеты') return `${s.name} — ${s.hint}. Мы помогаем оплатить ${travelKind(s)} за границей, когда российская карта не проходит на сайте площадки.`;
+  if (s.cat === 'Магазины') return `${s.name} — ${s.hint}. Мы помогаем оплатить заказ в зарубежном магазине: товар, доставку, налоги и финальную корзину.`;
+  if (s.cat === 'Gift Cards') return `${s.name} — ${s.hint}. Мы покупаем gift card нужного региона и номинала, а затем передаём код и инструкцию по активации.`;
+  if (s.cat === 'Игровые ассеты') return `${s.name} — ${s.hint}. Мы оплачиваем игровые ассеты, 3D-модели, плагины и лицензии на зарубежных marketplace-площадках.`;
+  return `${s.name} — ${s.hint}. Мы помогаем оплатить сервис из России с зарубежной карты.`;
+}
+
+function verticalDataNeeded(s) {
+  if (s.cat === 'Билеты') return ['ссылка на страницу билета или события', 'дата, время, город и количество посетителей', 'имя и email для ваучера, если площадка требует данные участника'];
+  if (s.cat === 'Магазины') return ['ссылка на товар или скрин корзины', 'размер, цвет, количество и адрес доставки', 'финальная сумма заказа с доставкой и налогами'];
+  if (s.cat === 'Gift Cards') return ['регион аккаунта', 'номинал gift card', 'email или мессенджер, куда отправить код'];
+  if (s.cat === 'Игровые ассеты') return ['ссылка на ассет или модель', 'тип лицензии и аккаунт marketplace, если покупка привязана к нему', 'формат файла или движок, если есть выбор'];
+  return ['ссылка на оплату', 'выбранный тариф или сумма', 'контакт для связи'];
+}
+
+function verticalSteps(s) {
+  return verticalDataNeeded(s).map((x) => `<li>${x}</li>`).join('');
+}
+
+function verticalPage(s, intentKey, variant) {
+  const cat = CATEGORIES[s.cat];
+  const title = variant.title(s);
+  const h1 = variant.h1(s);
+  return {
+    title,
+    description: `${h1}: оплатим зарубежной картой, подскажем данные для заказа и пришлём подтверждение.`,
+    h1,
+    body: `
+      <section class="block">
+        <p class="lead">${verticalIntro(s)}</p>
+      </section>
+
+      <section class="block">
+        <h2>${variant.whatTitle}</h2>
+        <p>${cat.workaround}</p>
+        <p>Можно оплатить как разовый заказ, так и несколько позиций сразу. Перед оплатой проверяем регион, валюту, ограничения площадки и финальную сумму, чтобы не было лишних списаний.</p>
+      </section>
+
+      <section class="block">
+        <h2>Какие данные нужны</h2>
+        <ul class="check">${verticalSteps(s)}</ul>
+        <p>Если площадка запрашивает дополнительные данные, мы заранее уточним их в Telegram или WhatsApp.</p>
+      </section>
+
+      <section class="block">
+        <h2>Как проходит оплата</h2>
+        <ol class="steps">
+          <li>Вы отправляете ссылку, регион, дату или состав заказа.</li>
+          <li>Мы проверяем, можно ли оплатить ${s.name}, и называем сумму в рублях.</li>
+          <li>Вы переводите оплату удобным способом.</li>
+          <li>Мы оплачиваем заказ зарубежной картой и присылаем билет, код, чек или подтверждение.</li>
+        </ol>
+      </section>
+
+      <section class="block">
+        <h2>Можно ли оплатить российской картой?</h2>
+        <p>Чаще всего нет: российские Visa/Mastercard не проходят, а карты «Мир» не поддерживаются. PlataPay закрывает этот шаг — платёж проходит с зарубежной карты, а вы оплачиваете нам в рублях.</p>
+      </section>
+
+      <section class="block">
+        <h2>Сколько занимает по времени</h2>
+        <p>Обычно 5–15 минут после согласования суммы. Для редких билетов, аукционов, лимитированных товаров и площадок с ручной проверкой может потребоваться больше времени — предупредим заранее.</p>
+      </section>
+
+      <section class="block cta">
+        <h2>${variant.cta(s)}</h2>
+        <p>Пришлите ссылку или описание покупки — проверим возможность оплаты и ответим в ближайшее время.</p>
+        <a class="btn-primary" href="https://payoplata.ru/#popupforma">Оставить заявку</a>
+      </section>
+    `,
+    faq: [
+      { q: `Можно ли оплатить ${s.name} российской картой?`, a: `Обычно нет. Мы оплачиваем ${s.name} зарубежной картой и принимаем оплату от вас в рублях.` },
+      { q: `Что нужно для заявки на ${s.name}?`, a: verticalDataNeeded(s).join(', ') + '.' },
+      { q: `Сколько стоит помощь с ${s.name}?`, a: `${fmtRub(s.price)} или по финальной сумме заказа. Точную цену подтверждаем до оплаты.` },
+    ],
+  };
+}
+
+export function kupitBilet(s) {
+  return verticalPage(s, 'kupit-bilet', {
+    title: (x) => `Как купить билеты в ${x.name} из России — PlataPay`,
+    h1: (x) => `Как купить билеты в ${x.name} из России`,
+    whatTitle: 'Что можно оплатить',
+    cta: (x) => `Купить билеты в ${x.name}`,
+  });
+}
+
+export function oplataBiletov(s) {
+  return verticalPage(s, 'oplata-biletov', {
+    title: (x) => `Оплата билетов ${x.name} российской картой — как сделать из РФ`,
+    h1: (x) => `Как оплатить билеты в ${x.name} из России`,
+    whatTitle: 'Какие билеты и события оплачиваем',
+    cta: (x) => `Оплатить билеты ${x.name}`,
+  });
+}
+
+export function oplataZaGranicey(s) {
+  return verticalPage(s, 'oplata-za-granicey', {
+    title: (x) => `Оплата ${x.name} за границей из России — PlataPay`,
+    h1: (x) => `Оплата ${x.name} за границей`,
+    whatTitle: 'Как PlataPay помогает с оплатой за границей',
+    cta: (x) => `Оплатить ${x.name}`,
+  });
+}
+
+export function kupitGiftCard(s) {
+  return verticalPage(s, 'kupit-gift-card', {
+    title: (x) => `Купить ${x.name} из России — PlataPay`,
+    h1: (x) => `Купить ${x.name}`,
+    whatTitle: 'Какие gift cards покупаем',
+    cta: (x) => `Купить ${x.name}`,
+  });
+}
+
+export function oplataMagazina(s) {
+  return verticalPage(s, 'oplata-magazina', {
+    title: (x) => `Как оплатить заказ на ${x.name} из России — PlataPay`,
+    h1: (x) => `Оплата заказа на ${x.name} из России`,
+    whatTitle: 'Какие заказы можно оплатить',
+    cta: (x) => `Оплатить заказ ${x.name}`,
+  });
+}
+
+export function kupitAsset(s) {
+  return verticalPage(s, 'kupit-asset', {
+    title: (x) => `Как купить ассет в ${x.name} из России — PlataPay`,
+    h1: (x) => `Купить ассет в ${x.name} из России`,
+    whatTitle: 'Какие ассеты и лицензии оплачиваем',
+    cta: (x) => `Купить ассет ${x.name}`,
+  });
+}
+
+export function oplataDostoprimechatelnosti(s) {
+  return verticalPage(s, 'oplata-dostoprimechatelnosti', {
+    title: (x) => `Оплата достопримечательности ${x.name} из России — PlataPay`,
+    h1: (x) => `Оплата достопримечательности ${x.name}`,
+    whatTitle: 'Что входит в оплату достопримечательности',
+    cta: (x) => `Оплатить ${x.name}`,
+  });
+}
+
+export const RENDERERS = {
+  oplata, kak, rf, cena, sub, year,
+  'kupit-bilet': kupitBilet,
+  'oplata-biletov': oplataBiletov,
+  'oplata-za-granicey': oplataZaGranicey,
+  'kupit-gift-card': kupitGiftCard,
+  'oplata-magazina': oplataMagazina,
+  'kupit-asset': kupitAsset,
+  'oplata-dostoprimechatelnosti': oplataDostoprimechatelnosti,
+};
 
 export { faqBlock, relatedLinks };

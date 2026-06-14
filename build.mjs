@@ -19,6 +19,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { buildEnhancement } from './seo/enhance.mjs';
+import { buildPricingUi } from './seo/pricing-ui.mjs';
+import { SERVICES as SEO_SERVICES, INTENTS, CATEGORIES, serviceIntents } from './seo/data.mjs';
 
 const SRC = 'tilda-original';
 const OUT = 'out';
@@ -33,12 +35,47 @@ export const YANDEX_VERIFY = process.env.YANDEX_VERIFY || 'faaec45fb982b403';
 export const GOOGLE_VERIFY = process.env.GOOGLE_VERIFY || '';
 
 const enhanceInject = buildEnhancement(BASE_HREF);
+const pricingUiInject = buildPricingUi();
 
 function verifyTags() {
   let s = '';
   if (YANDEX_VERIFY) s += `<meta name="yandex-verification" content="${YANDEX_VERIFY}">`;
   if (GOOGLE_VERIFY) s += `<meta name="google-site-verification" content="${GOOGLE_VERIFY}">`;
   return s;
+}
+
+const CATALOG_EXTRA_CATS = [
+  ['Билеты', 'Билеты'],
+  ['Магазины', 'Магазины'],
+  ['Gift Cards', 'Gift Cards'],
+  ['Игровые ассеты', 'Игровые ассеты'],
+];
+
+function patchCatalogExpansion(html, services) {
+  const extraKeys = new Set(CATALOG_EXTRA_CATS.map(([key]) => key));
+  const extraServices = services
+    .filter((service) => extraKeys.has(service.cat))
+    .map((service) => ({
+      name: service.name,
+      desc: service.hint,
+      price: service.price ? `${service.price.toLocaleString('ru-RU')} ₽` : '',
+      cat: service.cat,
+      url: '/#popupforma',
+      slug: service.slug,
+      logo: service.logo || '',
+    }));
+
+  if (!extraServices.length) return html;
+
+  const servicesInject = `\n    // Build-time PlataPay expansion: tickets, shops, gift cards, assets.\n    ...${JSON.stringify(extraServices, null, 4).replace(/\n/g, '\n    ')},`;
+  html = html.replace(/(\n\s*const CATS = \[)/, `${servicesInject}$1`);
+
+  const catsInject = CATALOG_EXTRA_CATS
+    .map(([key, label]) => `    {key:${JSON.stringify(key)}, label:${JSON.stringify(label)}},`)
+    .join('\n');
+  html = html.replace(/(\n\s*\{key:"Маркет",\s*label:"Маркетплейсы"\},)/, `$1\n${catsInject}`);
+
+  return html;
 }
 
 const PAGES = [
@@ -139,7 +176,10 @@ ${verifyTags()}
 // .nojekyll so GitHub Pages serves _next-style files too
 fs.writeFileSync(path.join(OUT, '.nojekyll'), '');
 
-function patchPage(html, isHome) {
+function patchPage(html, page) {
+  const { isHome, src } = page;
+  if (src === 'page143711326.html') html = patchCatalogExpansion(html, SEO_SERVICES);
+
   // 1) Nav links: rewrite absolute SPA-style paths to relative paths
   //    that combine with <base href> correctly. Done BEFORE the base
   //    tag is injected — otherwise href="/" inside <base href="/">
@@ -173,7 +213,9 @@ function patchPage(html, isHome) {
   );
   html = html.replace(/<div class="t-tildalabel[\s\S]*?<\/a>\s*<\/div>/gi, '');
 
-  // 4) Inject our mini order form + search autocomplete just before </body>.
+  // 4) Inject mobile/pricing CSS+JS in <head> so it wins early,
+  //    then inject our mini order form + search autocomplete before </body>.
+  html = html.replace('</head>', `${pricingUiInject}</head>`);
   html = html.replace('</body>', `${enhanceInject}</body>`);
 
   return html;
@@ -181,7 +223,7 @@ function patchPage(html, isHome) {
 
 for (const { src, dest, isHome } of PAGES) {
   const html = fs.readFileSync(path.join(SRC, src), 'utf8');
-  const patched = patchPage(html, isHome);
+  const patched = patchPage(html, { src, dest, isHome });
   const outPath = path.join(OUT, dest);
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
   fs.writeFileSync(outPath, patched);
@@ -189,16 +231,16 @@ for (const { src, dest, isHome } of PAGES) {
 }
 
 // ---------------- SEO landing pages ----------------
-const { SERVICES: SEO_SERVICES, INTENTS } = await import('./seo/data.mjs');
 const { RENDERERS } = await import('./seo/templates.mjs');
 const { renderPage } = await import('./seo/layout.mjs');
 
 const seoUrls = [];
 let seoCount = 0;
 for (const service of SEO_SERVICES) {
-  for (const intent of INTENTS) {
-    const page = RENDERERS[intent.key](service, INTENTS);
-    const html = renderPage({ base: BASE_HREF, page, service, intent, intents: INTENTS, verifyTags: verifyTags() });
+  const intentsForService = serviceIntents(service);
+  for (const intent of intentsForService) {
+    const page = RENDERERS[intent.key](service, intentsForService);
+    const html = renderPage({ base: BASE_HREF, page, service, intent, intents: intentsForService, verifyTags: verifyTags() });
     const slug = intent.slug(service.slug);
     const dir = path.join(OUT, slug);
     fs.mkdirSync(dir, { recursive: true });
@@ -249,7 +291,7 @@ ${Object.entries(grouped).map(([cat, list]) => `
   ${list.map((s) => `
     <div class="svc">
       <h3>${s.name}</h3>
-      ${INTENTS.map((i) => `<a href="${BASE_HREF}${i.slug(s.slug)}/">${i.title} ${s.name}</a>`).join('')}
+      ${serviceIntents(s).map((i) => `<a href="${BASE_HREF}${i.slug(s.slug)}/">${i.title} ${s.name}</a>`).join('')}
     </div>
   `).join('')}
 `).join('')}

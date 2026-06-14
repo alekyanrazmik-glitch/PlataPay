@@ -3,6 +3,7 @@
 // for crawlers to parse.
 
 import { faqBlock, relatedLinks } from './templates.mjs';
+import { buildPricingUi, serviceAccent } from './pricing-ui.mjs';
 
 export function renderPage({
   base,          // base href, e.g. '/' on custom domain
@@ -13,6 +14,8 @@ export function renderPage({
   verifyTags = '',
 }) {
   const canonical = `https://payoplata.ru/${intent.slug(service.slug)}/`;
+  const accent = serviceAccent(service);
+  const logoUrl = service.logo ? `https://raw.githubusercontent.com/alekyanrazmik-glitch/Just-PlataPay/master/${service.logo}` : '';
   const faqLd = page.faq && page.faq.length
     ? `<script type="application/ld+json">${JSON.stringify({
         '@context': 'https://schema.org',
@@ -43,7 +46,7 @@ export function renderPage({
 <meta property="og:url" content="${canonical}">
 ${verifyTags}
 <style>
-  :root { color-scheme: dark; }
+  :root { color-scheme: dark; --svc-accent: ${accent}; }
   *,*::before,*::after{box-sizing:border-box;}
   html,body{margin:0;background:#08172F;color:#eef3ff;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','Segoe UI',system-ui,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.55;}
   a{color:#7BAEFF;text-decoration:none;}
@@ -116,6 +119,7 @@ ${verifyTags}
     .order .row{grid-template-columns:1fr;}
   }
 </style>
+${buildPricingUi()}
 ${faqLd}
 <!-- Yandex.Metrika counter -->
 <script type="text/javascript">
@@ -209,7 +213,7 @@ ${faqLd}
 
   ${page.body}
 
-  <section class="order" id="zakaz" data-service="${escapeAttr(service.name)}" data-intent="${intent.key}">
+  <section class="order" id="zakaz" data-service="${escapeAttr(service.name)}" data-intent="${intent.key}" data-logo="${escapeAttr(logoUrl)}" data-accent="${accent}" style="--svc-accent:${accent}">
     <h2>Оплатить ${service.name}</h2>
     <p class="sub">Оставьте контакт — ответим в течение 5–15 минут и подтвердим сумму.</p>
     <form class="row" onsubmit="return ppSubmit(event)">

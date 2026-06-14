@@ -46,6 +46,19 @@ export function buildEnhancement(baseHref) {
   .pp-mm-modal .pp-mm-consent{margin-top:14px;font-size:12px;color:#8499c0;text-align:center;}
   .pp-mm-modal .pp-mm-consent a{color:#7BAEFF;}
 
+  /* source-level fallback: pin the hero search button to the right side of the row */
+  .pp-search-form{position:relative !important;display:block !important;width:calc(100% - 32px);max-width:720px;min-height:72px;box-sizing:border-box;padding:8px;}
+  .pp-search-form .pp-search-ico{position:absolute;left:20px;top:50%;transform:translateY(-50%);pointer-events:none;}
+  .pp-search-form > input{display:block;width:100%;height:54px;padding:0 160px 0 48px;box-sizing:border-box;}
+  .pp-search-form .pp-search-btn{position:absolute;right:8px;top:50%;transform:translateY(-50%);white-space:nowrap;}
+  .pp-search-form .pp-search-btn span{display:inline !important;}
+  @media(max-width:520px){
+    .pp-search-form{width:calc(100% - 24px);min-height:64px;padding:6px;}
+    .pp-search-form .pp-search-ico{left:16px;}
+    .pp-search-form > input{height:52px;padding:0 124px 0 40px;}
+    .pp-search-form .pp-search-btn{right:6px;padding-left:14px;padding-right:14px;}
+  }
+
   /* autocomplete dropdown */
   .pp-ac-wrap{position:relative;}
   .pp-ac-drop{position:absolute;left:0;right:0;top:calc(100% + 8px);background:#0c1f40;border:1px solid #1d3a6b;border-radius:12px;max-height:360px;overflow:auto;z-index:200;display:none;box-shadow:0 24px 60px -20px rgba(0,0,0,.6);}
@@ -188,12 +201,19 @@ export function buildEnhancement(baseHref) {
   }
 
   function attachAutocomplete(input){
+    // Keep the homepage hero search as a plain submit row; wrapping it for
+    // autocomplete is what makes the button drift on some Tilda/browser builds.
+    if (input.closest && input.closest('.pp-search-form')) return;
     if (input.dataset.ppAc) return;
     input.dataset.ppAc = '1';
     input.setAttribute('autocomplete', 'off');
 
     var wrap = document.createElement('div');
     wrap.className = 'pp-ac-wrap';
+    wrap.style.minWidth = '0';
+    wrap.style.width = 'auto';
+    input.style.width = '100%';
+    input.style.boxSizing = 'border-box';
     var parent = input.parentNode;
     parent.insertBefore(wrap, input);
     wrap.appendChild(input);

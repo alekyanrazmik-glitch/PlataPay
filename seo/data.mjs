@@ -59,6 +59,34 @@ export const CATEGORIES = {
     examples: ['Booking', 'Airbnb', 'Agoda', 'Airalo'],
     avg_rub: 0,
   },
+  'Билеты': {
+    title: 'Билеты',
+    pain: 'Иностранные билетные площадки, музеи, парки развлечений и концертные сервисы часто принимают только зарубежные карты, а часть покупок требует оплаты в валюте страны посещения.',
+    workaround: 'Мы оплачиваем билеты и входные слоты с зарубежной карты, помогаем проверить дату, время, регион и присылаем подтверждение покупки.',
+    examples: ['Disneyland', 'Louvre', 'Ticketmaster', 'Klook'],
+    avg_rub: 3500,
+  },
+  'Магазины': {
+    title: 'Магазины',
+    pain: 'Многие зарубежные магазины и маркетплейсы не принимают карты РФ, требуют зарубежный биллинг-адрес или отклоняют оплату на этапе антифрода.',
+    workaround: 'Оплачиваем заказ с иностранной карты: вы присылаете ссылку на товар, размер/цвет, адрес доставки и финальную сумму корзины.',
+    examples: ['Amazon', 'Farfetch', 'StockX', 'iHerb'],
+    avg_rub: 2500,
+  },
+  'Gift Cards': {
+    title: 'Gift Cards',
+    pain: 'Подарочные карты часто продаются только для конкретного региона и оплачиваются иностранной картой, поэтому российская карта не проходит.',
+    workaround: 'Покупаем gift card нужного региона и номинала, передаём код и инструкцию по активации.',
+    examples: ['App Store Gift Card', 'Steam Gift Card', 'PlayStation Gift Card'],
+    avg_rub: 1000,
+  },
+  'Игровые ассеты': {
+    title: 'Игровые ассеты',
+    pain: 'Asset-маркеты, 3D-стоки и игровые маркетплейсы продают модели, плагины и ассеты в валюте и не принимают российские карты.',
+    workaround: 'Оплачиваем ассет, модель или подписку на ваш аккаунт либо покупаем нужный файл и передаём подтверждение покупки.',
+    examples: ['Unity Asset Store', 'Fab', 'CGTrader', 'Envato Elements'],
+    avg_rub: 1500,
+  },
   Маркет: {
     title: 'Маркетплейсы и платёжные сервисы',
     pain: 'PayPal, Stripe, App Store и Alipay используются для покупок в зарубежных магазинах. Российские карты в этих системах не работают — пополнить или оплатить с них нельзя.',
@@ -168,6 +196,59 @@ export const SERVICES = [
   { slug: 'fansly', name: 'Fansly', cat: 'Бизнес', logo: 'Fansly.PNG', price: 1000, tiers: ['индивидуально'], hint: 'альтернатива OnlyFans с похожей моделью подписок' },
   { slug: 'x-premium', name: 'X Premium', cat: 'Бизнес', logo: 'X%20%28twitter%29%20Premium.PNG', price: 800, tiers: ['Basic ($3)', 'Premium ($8)', 'Premium+ ($16)'], hint: 'подписка X (Twitter) с галочкой, длинными постами и Grok внутри' },
 
+
+  // Билеты
+  { slug: 'disneyland', name: 'Disneyland', cat: 'Билеты', logo: '', price: 3500, tiers: ['1-day ticket', 'multi-day ticket', 'park hopper'], hint: 'билеты в парки Disneyland за границей: дата посещения, тип билета, парк и количество гостей', intents: ['oplata','kak','rf','cena','year','kupit-bilet','oplata-biletov','oplata-za-granicey','oplata-dostoprimechatelnosti'] },
+  { slug: 'universal-studios', name: 'Universal Studios', cat: 'Билеты', logo: '', price: 3500, tiers: ['1-day ticket', 'express pass', 'multi-day ticket'], hint: 'билеты и Express Pass в Universal Studios Japan, Singapore, Hollywood и другие парки', intents: ['oplata','kak','rf','cena','year','kupit-bilet','oplata-biletov','oplata-za-granicey','oplata-dostoprimechatelnosti'] },
+  { slug: 'ghibli-park', name: 'Ghibli Park', cat: 'Билеты', logo: '', price: 2500, tiers: ['entry ticket', 'premium areas'], hint: 'слоты и билеты в Ghibli Park в Японии с выбором даты и зоны посещения', intents: ['oplata','kak','rf','cena','year','kupit-bilet','oplata-biletov','oplata-za-granicey','oplata-dostoprimechatelnosti'] },
+  { slug: 'teamlab', name: 'teamLab', cat: 'Билеты', logo: '', price: 2000, tiers: ['Borderless', 'Planets', 'time slot'], hint: 'билеты в цифровые музеи teamLab с выбором локации, даты и тайм-слота', intents: ['oplata','kak','rf','cena','year','kupit-bilet','oplata-biletov','oplata-za-granicey','oplata-dostoprimechatelnosti'] },
+  { slug: 'louvre', name: 'Louvre', cat: 'Билеты', logo: '', price: 2000, tiers: ['museum ticket', 'guided visit'], hint: 'билеты в Лувр в Париже с выбором даты, времени входа и количества посетителей', intents: ['oplata','kak','rf','cena','year','kupit-bilet','oplata-biletov','oplata-za-granicey','oplata-dostoprimechatelnosti'] },
+  { slug: 'eiffel-tower', name: 'Eiffel Tower', cat: 'Билеты', logo: '', price: 2500, tiers: ['2nd floor', 'summit', 'guided tour'], hint: 'билеты на Эйфелеву башню: второй этаж, вершина, лифт или экскурсия', intents: ['oplata','kak','rf','cena','year','kupit-bilet','oplata-biletov','oplata-za-granicey','oplata-dostoprimechatelnosti'] },
+  { slug: 'burj-khalifa', name: 'Burj Khalifa', cat: 'Билеты', logo: '', price: 3000, tiers: ['At the Top', 'Sky', 'prime hours'], hint: 'билеты на смотровые площадки Burj Khalifa в Дубае с выбором времени посещения', intents: ['oplata','kak','rf','cena','year','kupit-bilet','oplata-biletov','oplata-za-granicey','oplata-dostoprimechatelnosti'] },
+  { slug: 'museum-of-the-future', name: 'Museum of the Future', cat: 'Билеты', logo: '', price: 2500, tiers: ['entry ticket', 'time slot'], hint: 'билеты в Museum of the Future в Дубае с фиксированным тайм-слотом', intents: ['oplata','kak','rf','cena','year','kupit-bilet','oplata-biletov','oplata-za-granicey','oplata-dostoprimechatelnosti'] },
+  { slug: 'ticketmaster', name: 'Ticketmaster', cat: 'Билеты', logo: '', price: 3000, tiers: ['concert ticket', 'sports ticket', 'resale ticket'], hint: 'покупка билетов на концерты, спорт и мероприятия через Ticketmaster', intents: ['oplata','kak','rf','cena','year','kupit-bilet','oplata-biletov','oplata-za-granicey','oplata-dostoprimechatelnosti'] },
+  { slug: 'eventim', name: 'Eventim', cat: 'Билеты', logo: '', price: 2500, tiers: ['concert ticket', 'festival ticket'], hint: 'европейская билетная платформа для концертов, фестивалей и шоу', intents: ['oplata','kak','rf','cena','year','kupit-bilet','oplata-biletov','oplata-za-granicey','oplata-dostoprimechatelnosti'] },
+  { slug: 'getyourguide', name: 'GetYourGuide', cat: 'Билеты', logo: '', price: 2000, tiers: ['tour', 'museum ticket', 'activity'], hint: 'экскурсии, музеи, трансферы и туристические активности по всему миру', intents: ['oplata','kak','rf','cena','year','kupit-bilet','oplata-biletov','oplata-za-granicey','oplata-dostoprimechatelnosti'] },
+  { slug: 'klook', name: 'Klook', cat: 'Билеты', logo: '', price: 2000, tiers: ['activity', 'transport', 'attraction ticket'], hint: 'билеты, активности, транспорт и туристические услуги в Азии и других регионах', intents: ['oplata','kak','rf','cena','year','kupit-bilet','oplata-biletov','oplata-za-granicey','oplata-dostoprimechatelnosti'] },
+  { slug: 'viator', name: 'Viator', cat: 'Билеты', logo: '', price: 2000, tiers: ['tour', 'activity', 'skip-the-line'], hint: 'экскурсии и билеты на достопримечательности через Viator и Tripadvisor', intents: ['oplata','kak','rf','cena','year','kupit-bilet','oplata-biletov','oplata-za-granicey','oplata-dostoprimechatelnosti'] },
+
+  // Магазины
+  { slug: 'farfetch', name: 'Farfetch', cat: 'Магазины', logo: '', price: 2500, tiers: ['оплата корзины', 'подарочный заказ'], hint: 'маркетплейс дизайнерской одежды и аксессуаров с оплатой зарубежной картой', intents: ['oplata','kak','rf','cena','year','oplata-za-granicey','oplata-magazina'] },
+  { slug: 'amazon', name: 'Amazon', cat: 'Магазины', logo: '', price: 1500, tiers: ['оплата товара', 'Prime', 'gift order'], hint: 'покупка товаров на Amazon с учётом региона, доставки и биллинг-адреса', intents: ['oplata','kak','rf','cena','year','oplata-za-granicey','oplata-magazina'] },
+  { slug: 'ebay', name: 'eBay', cat: 'Магазины', logo: '', price: 1500, tiers: ['buy now', 'auction', 'shipping'], hint: 'покупка товаров и лотов на eBay, включая аукционы и международную доставку', intents: ['oplata','kak','rf','cena','year','oplata-za-granicey','oplata-magazina'] },
+  { slug: 'etsy', name: 'Etsy', cat: 'Магазины', logo: '', price: 1200, tiers: ['digital item', 'physical item'], hint: 'маркетплейс handmade-товаров, цифровых файлов и авторских изделий', intents: ['oplata','kak','rf','cena','year','oplata-za-granicey','oplata-magazina'] },
+  { slug: 'stockx', name: 'StockX', cat: 'Магазины', logo: '', price: 2500, tiers: ['sneakers', 'streetwear', 'collectibles'], hint: 'покупка кроссовок, одежды и коллекционных вещей через StockX', intents: ['oplata','kak','rf','cena','year','oplata-za-granicey','oplata-magazina'] },
+  { slug: 'goat', name: 'GOAT', cat: 'Магазины', logo: '', price: 2500, tiers: ['sneakers', 'apparel'], hint: 'маркетплейс кроссовок и streetwear с проверкой подлинности', intents: ['oplata','kak','rf','cena','year','oplata-za-granicey','oplata-magazina'] },
+  { slug: 'nike', name: 'Nike', cat: 'Магазины', logo: '', price: 1500, tiers: ['товар из корзины', 'SNKRS'], hint: 'заказы на Nike и SNKRS в регионах, где нужна зарубежная карта', intents: ['oplata','kak','rf','cena','year','oplata-za-granicey','oplata-magazina'] },
+  { slug: 'adidas', name: 'Adidas', cat: 'Магазины', logo: '', price: 1500, tiers: ['товар из корзины', 'confirmed drops'], hint: 'оплата заказов Adidas и лимитированных релизов в зарубежных магазинах', intents: ['oplata','kak','rf','cena','year','oplata-za-granicey','oplata-magazina'] },
+  { slug: 'zara', name: 'Zara', cat: 'Магазины', logo: '', price: 1200, tiers: ['товар из корзины'], hint: 'оплата заказов Zara в зарубежных регионах с доставкой на выбранный адрес', intents: ['oplata','kak','rf','cena','year','oplata-za-granicey','oplata-magazina'] },
+  { slug: 'hm', name: 'H&M', cat: 'Магазины', logo: '', price: 1200, tiers: ['товар из корзины'], hint: 'оплата корзины H&M в зарубежных интернет-магазинах', intents: ['oplata','kak','rf','cena','year','oplata-za-granicey','oplata-magazina'] },
+  { slug: 'asos', name: 'ASOS', cat: 'Магазины', logo: '', price: 1200, tiers: ['товар из корзины'], hint: 'покупка одежды и обуви на ASOS с оплатой зарубежной картой', intents: ['oplata','kak','rf','cena','year','oplata-za-granicey','oplata-magazina'] },
+  { slug: 'shein', name: 'Shein', cat: 'Магазины', logo: '', price: 1000, tiers: ['товар из корзины'], hint: 'оплата заказов Shein в зарубежных регионах и мобильном приложении', intents: ['oplata','kak','rf','cena','year','oplata-za-granicey','oplata-magazina'] },
+  { slug: 'iherb', name: 'iHerb', cat: 'Магазины', logo: '', price: 1000, tiers: ['товар из корзины'], hint: 'заказы витаминов, БАДов и косметики на iHerb с оплатой иностранной картой', intents: ['oplata','kak','rf','cena','year','oplata-za-granicey','oplata-magazina'] },
+
+  // Gift Cards
+  { slug: 'app-store-gift-card', name: 'App Store Gift Card', cat: 'Gift Cards', logo: '', price: 1000, tiers: ['$10', '$25', '$50', '$100'], hint: 'подарочная карта Apple ID нужного региона для App Store, iTunes и подписок', intents: ['oplata','kak','rf','cena','year','kupit-gift-card','oplata-za-granicey'] },
+  { slug: 'google-play-gift-card', name: 'Google Play Gift Card', cat: 'Gift Cards', logo: '', price: 1000, tiers: ['$10', '$25', '$50', '$100'], hint: 'код Google Play нужного региона для приложений, игр и подписок Android', intents: ['oplata','kak','rf','cena','year','kupit-gift-card','oplata-za-granicey'] },
+  { slug: 'steam-gift-card', name: 'Steam Gift Card', cat: 'Gift Cards', logo: '', price: 1000, tiers: ['$5', '$10', '$25', '$50'], hint: 'подарочная карта Steam для пополнения кошелька нужного региона', intents: ['oplata','kak','rf','cena','year','kupit-gift-card','oplata-za-granicey'] },
+  { slug: 'playstation-gift-card', name: 'PlayStation Gift Card', cat: 'Gift Cards', logo: '', price: 1000, tiers: ['$10', '$25', '$50', 'региональные карты'], hint: 'код PlayStation Store для пополнения PSN-кошелька выбранного региона', intents: ['oplata','kak','rf','cena','year','kupit-gift-card','oplata-za-granicey'] },
+  { slug: 'xbox-gift-card', name: 'Xbox Gift Card', cat: 'Gift Cards', logo: '', price: 1000, tiers: ['$10', '$25', '$50'], hint: 'подарочная карта Xbox/Microsoft Store для игр, Game Pass и покупок в магазине', intents: ['oplata','kak','rf','cena','year','kupit-gift-card','oplata-za-granicey'] },
+  { slug: 'nintendo-eshop-gift-card', name: 'Nintendo eShop Gift Card', cat: 'Gift Cards', logo: '', price: 1000, tiers: ['$10', '$20', '$50', 'JPY/EUR/USD'], hint: 'карта Nintendo eShop нужного региона для игр и подписки Switch Online', intents: ['oplata','kak','rf','cena','year','kupit-gift-card','oplata-za-granicey'] },
+  { slug: 'roblox-gift-card', name: 'Roblox Gift Card', cat: 'Gift Cards', logo: '', price: 800, tiers: ['$10', '$25', '$50'], hint: 'подарочная карта Roblox для Robux и Premium-подписки', intents: ['oplata','kak','rf','cena','year','kupit-gift-card','oplata-za-granicey'] },
+  { slug: 'spotify-gift-card', name: 'Spotify Gift Card', cat: 'Gift Cards', logo: '', price: 1000, tiers: ['1 month', '3 months', '6 months'], hint: 'код Spotify Premium для выбранного региона аккаунта', intents: ['oplata','kak','rf','cena','year','kupit-gift-card','oplata-za-granicey'] },
+  { slug: 'netflix-gift-card', name: 'Netflix Gift Card', cat: 'Gift Cards', logo: '', price: 1500, tiers: ['$25', '$50', 'региональный номинал'], hint: 'подарочная карта Netflix для пополнения баланса аккаунта в поддерживаемом регионе', intents: ['oplata','kak','rf','cena','year','kupit-gift-card','oplata-za-granicey'] },
+  { slug: 'amazon-gift-card', name: 'Amazon Gift Card', cat: 'Gift Cards', logo: '', price: 1000, tiers: ['$10', '$25', '$50', '$100'], hint: 'подарочная карта Amazon для покупок в выбранном региональном магазине', intents: ['oplata','kak','rf','cena','year','kupit-gift-card','oplata-za-granicey'] },
+
+  // Игровые ассеты
+  { slug: 'unity-asset-store', name: 'Unity Asset Store', cat: 'Игровые ассеты', logo: '', price: 1200, tiers: ['asset purchase', 'publisher sale'], hint: 'ассеты, плагины, шаблоны и инструменты для Unity-проектов', intents: ['oplata','kak','rf','cena','year','kupit-asset','oplata-za-granicey'] },
+  { slug: 'unreal-engine-marketplace', name: 'Unreal Engine Marketplace', cat: 'Игровые ассеты', logo: '', price: 1200, tiers: ['asset purchase', 'plugin', 'environment pack'], hint: 'покупка ассетов, плагинов и окружений для Unreal Engine', intents: ['oplata','kak','rf','cena','year','kupit-asset','oplata-za-granicey'] },
+  { slug: 'fab', name: 'Fab', cat: 'Игровые ассеты', logo: '', price: 1200, tiers: ['3D asset', 'environment', 'plugin'], hint: 'маркетплейс Epic Games для 3D-ассетов, моделей, материалов и плагинов', intents: ['oplata','kak','rf','cena','year','kupit-asset','oplata-za-granicey'] },
+  { slug: 'cgtrader', name: 'CGTrader', cat: 'Игровые ассеты', logo: '', price: 1000, tiers: ['3D model', 'license'], hint: 'сток 3D-моделей для игр, визуализации, печати и коммерческих проектов', intents: ['oplata','kak','rf','cena','year','kupit-asset','oplata-za-granicey'] },
+  { slug: 'turbosquid', name: 'TurboSquid', cat: 'Игровые ассеты', logo: '', price: 1000, tiers: ['3D model', 'standard license'], hint: 'покупка 3D-моделей, персонажей, транспорта и окружений для коммерческой работы', intents: ['oplata','kak','rf','cena','year','kupit-asset','oplata-za-granicey'] },
+  { slug: 'sketchfab', name: 'Sketchfab', cat: 'Игровые ассеты', logo: '', price: 1000, tiers: ['downloadable model', 'license'], hint: 'покупка 3D-моделей и скачиваемых assets на Sketchfab Store', intents: ['oplata','kak','rf','cena','year','kupit-asset','oplata-za-granicey'] },
+  { slug: 'artstation-marketplace', name: 'ArtStation Marketplace', cat: 'Игровые ассеты', logo: '', price: 1000, tiers: ['brushes', 'models', 'tutorials'], hint: 'маркетплейс цифровых материалов: модели, кисти, туториалы, материалы и референсы', intents: ['oplata','kak','rf','cena','year','kupit-asset','oplata-za-granicey'] },
+  { slug: 'envato-elements-assets', name: 'Envato Elements', cat: 'Игровые ассеты', logo: '', price: 1700, tiers: ['monthly', 'annual'], hint: 'подписка на ассеты, шаблоны, графику, 3D и материалы для креативных проектов', intents: ['oplata','kak','rf','cena','year','kupit-asset','oplata-za-granicey'] },
+
   // Маркет
   { slug: 'paypal', name: 'PayPal', cat: 'Маркет', logo: 'PayPal.PNG', price: 1000, tiers: ['пополнение баланса'], hint: 'международная платёжная система для покупок и переводов' },
   { slug: 'stripe', name: 'Stripe', cat: 'Маркет', logo: 'Stripe.PNG', price: 1000, tiers: ['комиссия за приём платежей'], hint: 'инфраструктура приёма платежей для онлайн-бизнеса' },
@@ -196,6 +277,17 @@ export const INTENTS = [
   { key: 'cena',   slug: (s) => `${s}-cena`,              title: 'Цена' },
   { key: 'sub',    slug: (s) => `${s}-podpiska`,          title: 'Подписка' },
   { key: 'year',   slug: (s) => `${s}-2026`,              title: 'В 2026' },
+  { key: 'kupit-bilet', slug: (s) => `kupit-bilet-${s}`, title: 'Купить билет' },
+  { key: 'oplata-biletov', slug: (s) => `oplata-biletov-${s}`, title: 'Оплата билетов' },
+  { key: 'oplata-za-granicey', slug: (s) => `oplata-${s}-za-granicey`, title: 'Оплата за границей' },
+  { key: 'kupit-gift-card', slug: (s) => `kupit-${s}`, title: 'Купить gift card' },
+  { key: 'oplata-magazina', slug: (s) => `oplata-magazina-${s}`, title: 'Оплата магазина' },
+  { key: 'kupit-asset', slug: (s) => `kupit-asset-${s}`, title: 'Купить ассет' },
+  { key: 'oplata-dostoprimechatelnosti', slug: (s) => `oplata-dostoprimechatelnosti-${s}`, title: 'Оплата достопримечательности' },
 ];
+
+export function serviceIntents(service) {
+  return service.intents ? INTENTS.filter((intent) => service.intents.includes(intent.key)) : INTENTS.slice(0, 6);
+}
 
 export const YEAR = 2026;
