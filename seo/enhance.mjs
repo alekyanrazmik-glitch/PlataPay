@@ -171,6 +171,48 @@ export function buildEnhancement(baseHref) {
     });
   });
 
+  // -------- Animated placeholder (typewriter) --------
+  // Cycles service names in the search placeholder. Driven by a single
+  // self-rescheduling setTimeout chain so there is never more than one
+  // pending tick — no overlapping timers, no scrambled text. Pauses
+  // while the field is focused or has a value, and is skipped entirely
+  // for users who prefer reduced motion.
+  var PH_WORDS = ['ChatGPT','Spotify','YouTube Premium','Adobe','Midjourney','Notion','Discord','Steam','Canva','Claude','Booking'];
+
+  function animatePlaceholder(input){
+    if (input.dataset.ppPh) return;       // never start twice on one input
+    input.dataset.ppPh = '1';
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduce) return;                    // keep the static placeholder
+
+    var staticPH = input.getAttribute('placeholder') || 'Название сервиса';
+    var wi = 0, ci = 0, deleting = false, timer = null;
+
+    function set(text){ input.setAttribute('placeholder', text); }
+    function tick(){
+      var word = PH_WORDS[wi];
+      if (!deleting){
+        ci++;
+        set(word.slice(0, ci));
+        if (ci >= word.length){ deleting = true; timer = setTimeout(tick, 1500); return; }
+        timer = setTimeout(tick, 95);
+      } else {
+        ci--;
+        set(word.slice(0, ci));
+        if (ci <= 0){ deleting = false; wi = (wi + 1) % PH_WORDS.length; timer = setTimeout(tick, 450); return; }
+        timer = setTimeout(tick, 45);
+      }
+    }
+    function start(){ if (timer) return; tick(); }
+    function stop(){ if (timer){ clearTimeout(timer); timer = null; } }
+
+    input.addEventListener('focus', function(){ stop(); set(staticPH); });
+    input.addEventListener('blur', function(){
+      if (!input.value.trim()){ wi = 0; ci = 0; deleting = false; start(); }
+    });
+    if (document.activeElement !== input) start();
+  }
+
   // -------- Search autocomplete --------
   function norm(s){ return s.toLowerCase().replace(/[\\s\\-_]/g, ''); }
 
@@ -256,6 +298,8 @@ export function buildEnhancement(baseHref) {
     document.addEventListener('click', function(e){
       if (!wrap.contains(e.target)) drop.dataset.open = '';
     });
+
+    animatePlaceholder(input);
   }
 
   function wireSearch(){
