@@ -19,6 +19,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { buildEnhancement } from './seo/enhance.mjs';
+import { buildPricingUiPatch } from './seo/pricing-ui.mjs';
 
 const SRC = 'tilda-original';
 const OUT = 'out';
@@ -33,6 +34,7 @@ export const YANDEX_VERIFY = process.env.YANDEX_VERIFY || 'faaec45fb982b403';
 export const GOOGLE_VERIFY = process.env.GOOGLE_VERIFY || '';
 
 const enhanceInject = buildEnhancement(BASE_HREF);
+const pricingUiPatch = buildPricingUiPatch();
 
 const searchLayoutFix = `
 <style id="pp-search-layout-fix">
@@ -299,8 +301,8 @@ function patchPage(html, isHome) {
   );
   html = html.replace(/<div class="t-tildalabel[\s\S]*?<\/a>\s*<\/div>/gi, '');
 
-  // 5) Inject our mini order form + search autocomplete and search layout fixes just before </body>.
-  html = html.replace('</body>', `${enhanceInject}${searchLayoutFix}</body>`);
+  // 5) Inject our mini order form, search autocomplete, layout fixes and pricing UI just before </body>.
+  html = html.replace('</body>', `${enhanceInject}${searchLayoutFix}${pricingUiPatch}</body>`);
 
   return html;
 }
