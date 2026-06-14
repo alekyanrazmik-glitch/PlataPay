@@ -20,6 +20,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { buildEnhancement } from './seo/enhance.mjs';
 import { buildPricingUiPatch } from './seo/pricing-ui.mjs';
+import { patchStaticPrices } from './seo/static-pricing-patch.mjs';
 
 const SRC = 'tilda-original';
 const OUT = 'out';
@@ -293,7 +294,10 @@ function patchPage(html, isHome) {
   // 3) Keep the catalog search usable on mobile Safari and add a clear button.
   html = patchCatalogSearch(html);
 
-  // 4) Drop the Tilda branding badge ("Made on Tilda") that's hardcoded
+  // 4) Replace hardcoded card prices with calculated prices before the page is written.
+  html = patchStaticPrices(html);
+
+  // 5) Drop the Tilda branding badge ("Made on Tilda") that's hardcoded
   //    in the export.
   html = html.replace(
     /<!--\s*Tilda copyright[^>]*-->\s*<div class="t-tildalabel[\s\S]*?<\/div>\s*<\/div>/i,
@@ -301,8 +305,8 @@ function patchPage(html, isHome) {
   );
   html = html.replace(/<div class="t-tildalabel[\s\S]*?<\/a>\s*<\/div>/gi, '');
 
-  // 5) Inject our mini order form, search autocomplete, layout fixes and pricing UI just before </body>.
-  html = html.replace('</body>', `${enhanceInject}${searchLayoutFix}${pricingUiPatch}</body>`);
+  // 6) Inject our mini order form, search autocomplete, layout fixes and pricing UI just before </body>.
+  html = html.replace('</body>', `${pricingUiPatch}${enhanceInject}${searchLayoutFix}</body>`);
 
   return html;
 }
