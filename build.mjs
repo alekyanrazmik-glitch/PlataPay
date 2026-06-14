@@ -139,6 +139,87 @@ ${verifyTags()}
 // .nojekyll so GitHub Pages serves _next-style files too
 fs.writeFileSync(path.join(OUT, '.nojekyll'), '');
 
+function patchCatalogSearch(html) {
+  if (!html.includes('id="ppSearch"')) return html;
+
+  html = html.replace(
+    '<div class="pp-search"> <svg viewBox="0 0 24 24"',
+    '<div class="pp-search" role="search"> <svg class="pp-search-ico" aria-hidden="true" viewBox="0 0 24 24"',
+  );
+  html = html.replace(
+    '<input id="ppSearch" type="text" placeholder="Найти сервис…" autocomplete="off"> </div>',
+    '<input id="ppSearch" type="search" placeholder="Найти сервис…" autocomplete="off" enterkeyhint="search" autocapitalize="none" spellcheck="false"><button class="pp-search-clear" id="ppSearchClear" type="button" aria-label="Очистить поиск" hidden>&times;</button> </div>',
+  );
+  html = html.replace(
+    '    transition:border-color .2s;\n  }\n  .pp-search:focus-within{border-color:var(--accent);}',
+    '    transition:border-color .2s;\n    cursor:text;\n  }\n  .pp-search:focus-within{border-color:var(--accent);}',
+  );
+  html = html.replace(
+    '  .pp-search input::placeholder{color:var(--muted);}\n',
+    `  .pp-search input::placeholder{color:var(--muted);}
+  .pp-search-ico{flex:0 0 auto; pointer-events:none;}
+  .pp-search input[type="search"]::-webkit-search-cancel-button{display:none;}
+  .pp-search-clear{
+    width:28px; height:28px; flex:0 0 auto;
+    display:none; place-items:center;
+    border:0; border-radius:999px; padding:0;
+    background:rgba(255,255,255,.08); color:var(--muted);
+    font:700 20px/1 -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+    cursor:pointer; -webkit-tap-highlight-color:transparent;
+    transition:background .2s,color .2s;
+  }
+  .pp-search-clear:not([hidden]){display:grid;}
+  .pp-search-clear:hover{background:rgba(255,255,255,.14); color:var(--text);}
+`,
+  );
+  html = html.replace(
+    '  const searchEl=document.getElementById("ppSearch");\n  let active="all";',
+    '  const searchEl=document.getElementById("ppSearch");\n  const searchWrap=document.querySelector(".pp-search");\n  const clearSearchEl=document.getElementById("ppSearchClear");\n  let active="all";',
+  );
+  html = html.replace(
+    '  searchEl.addEventListener("input",function(){query=this.value; renderCards();});\n',
+    `  function focusSearch(){
+    if(!searchEl) return;
+    try{ searchEl.focus({preventScroll:true}); }catch(e){ searchEl.focus(); }
+    if(typeof searchEl.setSelectionRange==="function"){
+      var len=searchEl.value.length;
+      try{ searchEl.setSelectionRange(len,len); }catch(e){}
+    }
+  }
+  function syncSearchClear(){
+    if(clearSearchEl){ clearSearchEl.hidden = !searchEl.value; }
+  }
+  searchEl.addEventListener("input",function(){query=this.value; syncSearchClear(); renderCards();});
+  if(searchWrap){
+    ["click","touchend"].forEach(function(evt){
+      searchWrap.addEventListener(evt,function(e){
+        if(e.target===searchEl || e.target===clearSearchEl) return;
+        if(evt==="touchend") e.preventDefault();
+        focusSearch();
+      }, {passive:false});
+    });
+  }
+  if(clearSearchEl){
+    ["click","touchend"].forEach(function(evt){
+      clearSearchEl.addEventListener(evt,function(e){
+        e.preventDefault();
+        searchEl.value="";
+        query="";
+        syncSearchClear();
+        renderCards();
+        focusSearch();
+      }, {passive:false});
+    });
+  }
+`,
+  );
+  html = html.replace(
+    '      searchEl.value = urlQ;\n    }\n  }catch(e){}\n\n  renderCats(); renderCards();',
+    '      searchEl.value = urlQ;\n    }\n  }catch(e){}\n\n  syncSearchClear();\n  renderCats(); renderCards();',
+  );
+  return html;
+}
+
 function patchPage(html, isHome) {
   // 1) Nav links: rewrite absolute SPA-style paths to relative paths
   //    that combine with <base href> correctly. Done BEFORE the base
@@ -165,7 +246,10 @@ function patchPage(html, isHome) {
     `<head$1><base href="${BASE_HREF}">${verifyTags()}`,
   );
 
-  // 3) Drop the Tilda branding badge ("Made on Tilda") that's hardcoded
+  // 3) Keep the catalog search usable on mobile Safari and add a clear button.
+  html = patchCatalogSearch(html);
+
+  // 4) Drop the Tilda branding badge ("Made on Tilda") that's hardcoded
   //    in the export.
   html = html.replace(
     /<!--\s*Tilda copyright[^>]*-->\s*<div class="t-tildalabel[\s\S]*?<\/div>\s*<\/div>/i,
@@ -173,7 +257,7 @@ function patchPage(html, isHome) {
   );
   html = html.replace(/<div class="t-tildalabel[\s\S]*?<\/a>\s*<\/div>/gi, '');
 
-  // 4) Inject our mini order form + search autocomplete just before </body>.
+  // 5) Inject our mini order form + search autocomplete just before </body>.
   html = html.replace('</body>', `${enhanceInject}</body>`);
 
   return html;
