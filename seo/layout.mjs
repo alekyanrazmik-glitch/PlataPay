@@ -85,6 +85,21 @@ ${breadcrumbLd}
   .block.cta{text-align:center;background:linear-gradient(180deg,#0c1f40,#13294e);}
   .block.cta h2{font-size:24px;}
   .hint{font-size:13px;color:#8499c0;margin-top:10px;}
+  /* Trust row under H1 */
+  .trust-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px;}
+  .trust{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:#cfe0ff;background:rgba(46,123,255,.10);border:1px solid rgba(46,123,255,.28);border-radius:999px;padding:7px 12px;backdrop-filter:blur(6px);}
+  /* Advantages + stats (glass) */
+  .adv{margin:8px 0 16px;}
+  .adv-grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));margin-bottom:14px;}
+  .adv-card{background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));border:1px solid #16315f;border-radius:16px;padding:18px;backdrop-filter:blur(8px);}
+  .adv-card h3{color:#eef3ff;margin:8px 0 6px;}
+  .adv-card p{color:#9fb2d4;font-size:14px;margin:0;}
+  .adv-ic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-size:20px;background:linear-gradient(180deg,#2e7bff,#1e5fd6);box-shadow:0 10px 24px -10px rgba(46,123,255,.7);}
+  .stats{display:grid;gap:10px;grid-template-columns:repeat(4,1fr);}
+  .stats>div{background:#0c1f40;border:1px solid #16315f;border-radius:14px;padding:16px;text-align:center;}
+  .stats b{display:block;font-size:22px;color:#eef3ff;letter-spacing:-.01em;}
+  .stats span{display:block;font-size:12px;color:#8499c0;margin-top:4px;}
+  @media (max-width:640px){ .stats{grid-template-columns:1fr 1fr;} }
   ul,ol{margin:0 0 12px;padding-left:20px;color:#cfd9ef;}
   ul li,ol li{margin-bottom:6px;}
   .tiers li, .check li, .steps li{padding:4px 0;}
@@ -233,9 +248,31 @@ ${faqLd}
       <a href="${base}">Главная</a> · <a href="${base}catalog/">Каталог</a> · ${service.name}
     </div>
     <h1>${page.h1}</h1>
+    <div class="trust-row">
+      <span class="trust">⚡ Оплата за 5–15 минут</span>
+      <span class="trust">🔒 Без пароля и данных вашей карты</span>
+      <span class="trust">↩️ Вернём деньги, если не вышло</span>
+      <span class="trust">💬 Telegram и WhatsApp</span>
+    </div>
   </div>
 
   ${page.body}
+
+  <section class="adv">
+    <h2>Почему оплачивают через PlataPay</h2>
+    <div class="adv-grid">
+      <div class="adv-card"><div class="adv-ic">⚡</div><h3>Быстро</h3><p>Отвечаем за 1–15 минут и оплачиваем в среднем за 5–15 минут после подтверждения суммы.</p></div>
+      <div class="adv-card"><div class="adv-ic">🔒</div><h3>Безопасно</h3><p>Не просим пароль от аккаунта и данные вашей карты. Оплата идёт с нашей зарубежной карты.</p></div>
+      <div class="adv-card"><div class="adv-ic">₽</div><h3>Прозрачно</h3><p>Называем итоговую сумму в рублях до оплаты. Без скрытых комиссий и автосписаний.</p></div>
+      <div class="adv-card"><div class="adv-ic">↩️</div><h3>С гарантией</h3><p>Если оплата не прошла по нашей вине или со стороны сервиса — возвращаем деньги полностью.</p></div>
+    </div>
+    <div class="stats">
+      <div><b>140+</b><span>сервисов и направлений</span></div>
+      <div><b>5–15 мин</b><span>среднее время оплаты</span></div>
+      <div><b>100%</b><span>возврат, если не вышло</span></div>
+      <div><b>24/7</b><span>поддержка в мессенджерах</span></div>
+    </div>
+  </section>
 
   <section class="order" id="zakaz" data-service="${escapeAttr(service.name)}" data-intent="${intent.key}">
     <h2>Оплатить ${service.name}</h2>
