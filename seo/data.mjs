@@ -188,6 +188,144 @@ export const SERVICES = [
   { slug: 'airalo', name: 'Airalo', cat: 'Путешествия', logo: 'airalo.PNG', price: 500, tiers: ['eSIM-пакеты'], hint: 'eSIM-связь в путешествиях без роуминга' },
 ];
 
+// Current (2026) tariff lists per service. These override the rough
+// defaults above so the cards show real, up-to-date plans (and more of
+// them). The "$NN" in each label is the service's own official price —
+// the customer-facing RUB price is computed downstream; the formula is
+// no longer shown on the cards. Anything without "$" renders as
+// "по запросу" (variable balance/booking/region pricing).
+const TARIFF_OVERRIDES = {
+  // AI
+  chatgpt: ['Go ($8/мес)', 'Plus ($20/мес)', 'Business ($25/мес)', 'Pro ($200/мес)'],
+  claude: ['Pro ($20/мес)', 'Max 5× ($100/мес)', 'Max 20× ($200/мес)', 'Team ($30/мес)'],
+  gemini: ['Google AI Pro ($20/мес)', 'Google AI Ultra ($250/мес)'],
+  grok: ['SuperGrok ($30/мес)', 'SuperGrok Heavy ($300/мес)'],
+  perplexity: ['Pro ($20/мес)', 'Max ($200/мес)'],
+  qwen: ['Plus', 'Max'],
+  kimi: ['Pro'],
+  deepl: ['Starter ($9/мес)', 'Advanced ($29/мес)', 'Ultimate ($58/мес)'],
+  codex: ['В составе ChatGPT Plus', 'В составе ChatGPT Pro'],
+  cursor: ['Pro ($20/мес)', 'Teams ($40/мес)', 'Ultra ($200/мес)'],
+  'github-copilot': ['Pro ($10/мес)', 'Pro+ ($39/мес)', 'Business ($19/мес)'],
+  openrouter: ['Пополнение баланса', 'Кредиты по запросу'],
+  minimax: ['Starter ($15/мес)', 'Pro ($27/мес)', 'Unlimited ($95/мес)'],
+  manus: ['Basic ($19/мес)', 'Plus ($39/мес)', 'Pro ($199/мес)'],
+  writesonic: ['Lite ($16/мес)', 'Standard ($79/мес)', 'Professional ($199/мес)'],
+  'candy-ai': ['Premium ($13/мес)', 'Premium год ($70/год)'],
+  'higgsfield-ai': ['Basic ($9/мес)', 'Pro ($29/мес)', 'Ultimate ($49/мес)'],
+  'kits-ai': ['Converter ($10/мес)', 'Standard ($23/мес)', 'Pro ($30/мес)'],
+  n8n: ['Starter ($20/мес)', 'Pro ($50/мес)'],
+  manychat: ['Pro ($15/мес)', 'Premium'],
+
+  // Видео / Дизайн
+  'sora-2': ['В составе ChatGPT Plus', 'В составе ChatGPT Pro'],
+  midjourney: ['Basic ($10/мес)', 'Standard ($30/мес)', 'Pro ($60/мес)', 'Mega ($120/мес)'],
+  'kling-ai': ['Standard ($10/мес)', 'Pro ($37/мес)', 'Premier ($92/мес)'],
+  ideogram: ['Basic ($8/мес)', 'Plus ($20/мес)', 'Pro ($48/мес)'],
+  krea: ['Basic ($10/мес)', 'Pro ($35/мес)', 'Max ($60/мес)'],
+  'lensa-ai': ['Premium год ($40/год)'],
+  heygen: ['Creator ($29/мес)', 'Team ($89/мес)'],
+  pika: ['Standard ($8/мес)', 'Pro ($28/мес)', 'Fancy ($58/мес)'],
+  gling: ['Pro ($15/мес)', 'Pro год ($96/год)'],
+  gamma: ['Plus ($10/мес)', 'Pro ($20/мес)'],
+  'nano-banana': ['В составе Gemini', 'Google AI Pro ($20/мес)'],
+  'adobe-cc': ['Single App ($23/мес)', 'All Apps ($60/мес)', 'Студенты ($20/мес)'],
+  'adobe-photoshop': ['Фотопакет ($10/мес)', 'Photoshop ($23/мес)'],
+  'adobe-premiere': ['Single App ($23/мес)', 'All Apps ($60/мес)'],
+  'adobe-after-effects': ['Single App ($23/мес)', 'All Apps ($60/мес)'],
+  'adobe-firefly': ['Standard ($10/мес)', 'Pro ($30/мес)'],
+  canva: ['Pro ($15/мес)', 'Teams ($10/мес за чел.)'],
+  capcut: ['Pro ($10/мес)', 'Pro год ($75/год)'],
+  figma: ['Professional ($16/мес)', 'Organization ($55/мес)'],
+  freepik: ['Premium ($12/мес)', 'Premium+ ($23/мес)', 'Pro ($39/мес)'],
+  shutterstock: ['10 изображений ($49)', 'Подписка 25/мес ($49/мес)', '350/мес ($199/мес)'],
+  artlist: ['Music ($10/мес)', 'Music + SFX ($17/мес)', 'Max ($30/мес)'],
+  'maxon-cinema-4d': ['Подписка ($60/мес)', 'Год ($719/год)'],
+  'cults-3d': ['Разовая покупка модели', 'Cults+ ($5/мес)'],
+  loom: ['Business ($15/мес)', 'Business + AI ($20/мес)'],
+
+  // Музыка / Кино
+  ableton: ['Intro ($99)', 'Standard ($349)', 'Suite ($599)'],
+  splice: ['Sounds+ ($10/мес)', 'Creator ($15/мес)', 'Creator+ ($30/мес)'],
+  'epidemic-sound': ['Personal ($15/мес)', 'Commercial ($25/мес)', 'Pro ($49/мес)'],
+  bandcamp: ['Разовая покупка трека/альбома'],
+  suno: ['Pro ($10/мес)', 'Premier ($30/мес)'],
+  spotify: ['Individual ($12/мес)', 'Duo ($17/мес)', 'Family ($20/мес)', 'Student ($6/мес)'],
+  'youtube-premium': ['Individual ($14/мес)', 'Family ($23/мес)', 'Student ($8/мес)'],
+  twitch: ['Подписка Tier 1 ($5/мес)', 'Tier 2 ($10/мес)', 'Tier 3 ($25/мес)', 'Turbo ($12/мес)'],
+  tiktok: ['Монеты (пополнение)', 'Подписка на автора'],
+
+  // Игры
+  steam: ['Пополнение кошелька', 'Покупка игры', 'Подарок другу'],
+  nintendo: ['Пополнение eShop', 'Switch Online ($20/год)', 'Online + Expansion ($50/год)'],
+  faceit: ['Premium ($10/мес)', 'Premium год ($90/год)'],
+  'ps-plus-turkey': ['Essential', 'Extra', 'Deluxe'],
+  discord: ['Nitro Basic ($3/мес)', 'Nitro ($10/мес)', 'Nitro год ($100/год)'],
+
+  // Облако
+  'microsoft-365': ['Personal ($10/мес)', 'Family ($13/мес)', 'Copilot Pro ($20/мес)'],
+  google: ['Google One 100 ГБ ($2/мес)', 'One Premium 2 ТБ ($10/мес)', 'AI Pro ($20/мес)'],
+  'google-drive': ['100 ГБ ($2/мес)', '200 ГБ ($3/мес)', '2 ТБ ($10/мес)'],
+  'google-cloud': ['Pay-as-you-go (по расходу)'],
+  'google-bigquery': ['Pay-as-you-go (по объёму)'],
+  dropbox: ['Plus ($12/мес)', 'Essentials ($20/мес)', 'Family ($20/мес)'],
+  cloudflare: ['Pro ($25/мес)', 'Business ($250/мес)'],
+  supabase: ['Pro ($25/мес)', 'Team ($599/мес)'],
+  'proton-mail': ['Mail Plus ($5/мес)', 'Proton Unlimited ($10/мес)'],
+  swift: ['Apple Developer Program ($99/год)'],
+  flutterflow: ['Standard ($30/мес)', 'Pro ($70/мес)'],
+  weavy: ['Starter', 'Pro'],
+  wix: ['Light ($17/мес)', 'Core ($29/мес)', 'Business ($36/мес)'],
+
+  // Бизнес
+  notion: ['Plus ($10/мес)', 'Business ($20/мес)', 'Notion AI ($10/мес)'],
+  miro: ['Starter ($8/мес)', 'Business ($16/мес)'],
+  airtable: ['Team ($20/мес)', 'Business ($45/мес)'],
+  jira: ['Standard ($8/мес)', 'Premium ($14/мес)'],
+  zoom: ['Pro ($15/мес)', 'Business ($22/мес)'],
+  tradingview: ['Essential ($15/мес)', 'Plus ($30/мес)', 'Premium ($60/мес)'],
+  patreon: ['Подписка ($3/мес)', 'Подписка ($5/мес)', 'Подписка ($10/мес)'],
+  boosty: ['Подписка на автора (тиры)'],
+  'ko-fi': ['Разовая поддержка', 'Gold ($6/мес)'],
+  onlyfans: ['Подписка на автора (индивидуально)'],
+  fansly: ['Подписка на автора (индивидуально)'],
+  'x-premium': ['Basic ($3/мес)', 'Premium ($8/мес)', 'Premium+ ($22/мес)'],
+
+  // Маркет
+  paypal: ['Пополнение баланса', 'Оплата покупки'],
+  stripe: ['Оплата по счёту', 'Комиссия за приём'],
+  alipay: ['Пополнение баланса', 'Оплата покупки'],
+  'app-store': ['Пополнение Apple ID', 'Оплата подписки'],
+
+  // Обучение
+  coursera: ['Coursera Plus ($59/мес)', 'Plus год ($399/год)'],
+  udemy: ['Разовая покупка курса', 'Personal Plan ($17/мес)'],
+  duolingo: ['Super ($13/мес)', 'Max ($30/мес)', 'Family ($120/год)'],
+  italki: ['Пополнение баланса', 'Урок с преподавателем'],
+  myheritage: ['Premium', 'Premium Plus', 'Complete'],
+
+  // Путешествия
+  airbnb: ['Оплата брони'],
+  booking: ['Оплата брони'],
+  agoda: ['Оплата брони'],
+  airalo: ['eSIM-пакет (1 ГБ)', 'eSIM-пакет (5 ГБ)', 'eSIM-пакет (10 ГБ)'],
+};
+
+// Apply the overrides in place and keep each service's rough cheapest
+// price (used in SEO prose) in sync with the cheapest priced tier.
+for (const service of SERVICES) {
+  const tiers = TARIFF_OVERRIDES[service.slug];
+  if (!tiers) continue;
+  service.tiers = tiers;
+  const prices = tiers
+    .map((t) => {
+      const m = String(t).match(/\$\s*(\d+(?:[.,]\d+)?)/);
+      return m ? Math.round(Number(m[1].replace(',', '.')) * 80 + 1000) : null;
+    })
+    .filter((x) => x !== null);
+  if (prices.length) service.price = Math.min(...prices);
+}
+
 // SEO intent templates — distinct URL slug patterns and content angles.
 export const INTENTS = [
   { key: 'oplata', slug: (s) => `oplata-${s}`,            title: 'Оплата' },

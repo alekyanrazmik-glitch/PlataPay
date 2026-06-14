@@ -164,8 +164,10 @@ export function buildPricingUiPatch() {
   .pp-tariff-mini img{width:100%;height:100%;object-fit:contain;padding:4px;box-sizing:border-box;}
   .pp-tariff-name{font-weight:850;font-size:17px;line-height:1.25;}
   .pp-tariff-usd{color:#9fb2d4;font-size:13px;}
-  .pp-tariff-rub{font-size:24px;font-weight:950;color:#fff;margin-top:auto;letter-spacing:-.02em;}
+  .pp-tariff-rub{font-size:26px;font-weight:950;color:#fff;margin-top:auto;letter-spacing:-.02em;}
+  .pp-tariff-official{font-size:12px;color:#8aa0c6;line-height:1.35;margin-top:2px;}
   .pp-tariff-note{font-size:12px;color:#8499c0;line-height:1.35;}
+  .pp-tariff-card-custom{border-style:dashed;}
   .pp-tariff-pick{border:1px solid var(--svc-accent);background:color-mix(in srgb,var(--svc-accent) 18%,transparent);color:#fff;border-radius:12px;padding:11px 12px;font-weight:850;cursor:pointer;margin-top:4px;}
   .pp-tariff-pick:hover{background:var(--svc-accent);}
   .pp-checkout-box{border:1px solid color-mix(in srgb,var(--svc-accent) 40%,#1d3a6b);background:rgba(8,23,47,.82);border-radius:16px;padding:16px;margin-top:16px;}
@@ -276,17 +278,17 @@ export function buildPricingUiPatch() {
     modal.style.setProperty('--svc-accent', s.accent || '#2e7bff');
   }
   function tariffHeaderHtml(s){
-    return '<div class="pp-tariff-hero">'+logoHtml(s,'pp-tariff-logo')+'<div><div class="pp-tariff-badge">'+escapeHtml(s.cat || 'Сервис')+'</div><h3 class="pp-tariff-title">'+escapeHtml(s.name)+'</h3><p class="pp-tariff-sub">Выберите тариф. Цена считается автоматически: стоимость тарифа в долларах × '+RATE+' ₽ + '+FEE+' ₽.</p></div></div>';
+    return '<div class="pp-tariff-hero">'+logoHtml(s,'pp-tariff-logo')+'<div><div class="pp-tariff-badge">'+escapeHtml(s.cat || 'Сервис')+'</div><h3 class="pp-tariff-title">'+escapeHtml(s.name)+'</h3><p class="pp-tariff-sub">Выберите тариф — как на сайте '+escapeHtml(s.name)+'. Цена уже в рублях, с учётом оплаты сервиса и нашей комиссии.</p></div></div>';
   }
   function tierCardsHtml(s){
     var tiers = s.tiers && s.tiers.length ? s.tiers : [{label:'Индивидуальный тариф',plan:'Индивидуальный тариф',usd:null,rub:null}];
     var html = '<div class="pp-tariff-grid">';
     tiers.forEach(function(tier,idx){
-      var usd = tier.usd ? '$'+tier.usd+' × '+RATE+' ₽ + '+FEE+' ₽' : 'Цена зависит от тарифа/суммы';
+      var official = tier.usd ? 'Официально $'+tier.usd+' у сервиса' : 'Цена зависит от тарифа или суммы';
       var price = money(tier.rub);
-      html += '<div class="pp-tariff-card" data-tier="'+idx+'" role="button" tabindex="0"><div class="pp-tariff-top"><div class="pp-tariff-name">'+escapeHtml(tier.plan || tier.label)+'</div>'+logoHtml(s,'pp-tariff-mini')+'</div><div class="pp-tariff-usd">'+escapeHtml(usd)+'</div><div class="pp-tariff-rub">'+escapeHtml(price)+'</div><div class="pp-tariff-note">'+escapeHtml(s.name)+' · '+escapeHtml(tier.label)+'</div><button class="pp-tariff-pick" data-tier="'+idx+'">Выбрать тариф</button></div>';
+      html += '<div class="pp-tariff-card" data-tier="'+idx+'" role="button" tabindex="0"><div class="pp-tariff-top"><div class="pp-tariff-name">'+escapeHtml(tier.plan || tier.label)+'</div>'+logoHtml(s,'pp-tariff-mini')+'</div><div class="pp-tariff-rub">'+escapeHtml(price)+'</div><div class="pp-tariff-official">'+escapeHtml(official)+'</div><button class="pp-tariff-pick" data-tier="'+idx+'">Выбрать тариф</button></div>';
     });
-    html += '<div class="pp-tariff-card" data-tier="custom" role="button" tabindex="0"><div class="pp-tariff-top"><div class="pp-tariff-name">Другой тариф / сумма</div>'+logoHtml(s,'pp-tariff-mini')+'</div><div class="pp-tariff-usd">Пополнение баланса, годовой тариф или другой план</div><div class="pp-tariff-rub">по запросу</div><div class="pp-tariff-note">Уточним сумму и пришлём ссылку на оплату</div><button class="pp-tariff-pick" data-tier="custom">Выбрать тариф</button></div>';
+    html += '<div class="pp-tariff-card pp-tariff-card-custom" data-tier="custom" role="button" tabindex="0"><div class="pp-tariff-top"><div class="pp-tariff-name">Другой тариф / сумма</div>'+logoHtml(s,'pp-tariff-mini')+'</div><div class="pp-tariff-rub">по запросу</div><div class="pp-tariff-official">Пополнение баланса, годовой план или другой тариф — уточним сумму</div><button class="pp-tariff-pick" data-tier="custom">Выбрать тариф</button></div>';
     return html + '</div>';
   }
   function showModal(){
