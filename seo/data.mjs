@@ -66,6 +66,44 @@ export const CATEGORIES = {
     examples: ['PayPal', 'Stripe', 'App Store'],
     avg_rub: 1000,
   },
+
+  // ---- New verticals (2026): tickets, foreign shops, gift cards, game assets ----
+  Билеты: {
+    title: 'Билеты и достопримечательности',
+    label: 'Билеты и места',
+    kind: 'ticket',
+    pain: 'Билеты в парки, музеи, на концерты и достопримечательности продаются на зарубежных сайтах, которые принимают только иностранные карты. Disneyland, Louvre, Ticketmaster и подобные площадки отклоняют карты российских банков на этапе оплаты.',
+    workaround: 'Оплачиваем билеты с зарубежной карты на ваше имя — вы получаете электронный билет или подтверждение брони на почту, как при обычной покупке.',
+    examples: ['Disneyland', 'Louvre', 'Ticketmaster', 'Klook'],
+    avg_rub: 0,
+  },
+  Магазины: {
+    title: 'Зарубежные интернет-магазины',
+    label: 'Зарубежные магазины',
+    kind: 'shop',
+    pain: 'Farfetch, Amazon, StockX, Nike и другие зарубежные магазины не принимают карты РФ и часто не доставляют в Россию напрямую. Оформить заказ и оплатить его со своей карты не получается.',
+    workaround: 'Оплачиваем ваш заказ с зарубежной карты, помогаем с адресом доставки или посредником — вы получаете товар, не имея иностранной карты.',
+    examples: ['Farfetch', 'Amazon', 'StockX', 'Nike'],
+    avg_rub: 0,
+  },
+  GiftCards: {
+    title: 'Подарочные карты (Gift Cards)',
+    label: 'Gift Cards',
+    kind: 'giftcard',
+    pain: 'Подарочные карты App Store, Google Play, Steam, PlayStation и других сервисов в нужном регионе нельзя купить с российской карты. А карты не того региона не активируются в вашем аккаунте.',
+    workaround: 'Покупаем подарочную карту нужного региона и присылаем код — вы активируете его в своём аккаунте и пополняете баланс.',
+    examples: ['App Store Gift Card', 'Steam Gift Card', 'PlayStation Gift Card', 'Amazon Gift Card'],
+    avg_rub: 1800,
+  },
+  Ассеты: {
+    title: 'Игровые ассеты и 3D-модели',
+    label: 'Игровые ассеты и 3D',
+    kind: 'asset',
+    pain: 'Unity Asset Store, Unreal Engine Marketplace, CGTrader и TurboSquid принимают оплату только западными картами. Купить ассет, 3D-модель или модель для игры со своей карты разработчику из России нельзя.',
+    workaround: 'Оплачиваем ассет или 3D-модель с зарубежной карты на ваш аккаунт — покупка появляется в вашей библиотеке, лицензия оформлена на вас.',
+    examples: ['Unity Asset Store', 'Unreal Engine Marketplace', 'CGTrader', 'Sketchfab'],
+    avg_rub: 1500,
+  },
 };
 
 // Each service has its own slug (latin, kebab-case), category, brief,
@@ -186,6 +224,58 @@ export const SERVICES = [
   { slug: 'booking', name: 'Booking', cat: 'Путешествия', logo: 'Booking.PNG', price: 0, tiers: ['стоимость брони'], hint: 'оплата отелей, апартаментов и трансферов через Booking.com' },
   { slug: 'agoda', name: 'Agoda', cat: 'Путешествия', logo: 'Agoda.PNG', price: 0, tiers: ['стоимость брони'], hint: 'бронирование отелей с фокусом на Азию' },
   { slug: 'airalo', name: 'Airalo', cat: 'Путешествия', logo: 'airalo.PNG', price: 500, tiers: ['eSIM-пакеты'], hint: 'eSIM-связь в путешествиях без роуминга' },
+
+  // Билеты и достопримечательности
+  { slug: 'disneyland', name: 'Disneyland', cat: 'Билеты', domain: 'disneyland.disney.go.com', price: 0, tiers: ['1-Day 1-Park', '1-Day Park Hopper', 'Multi-Day', 'Genie+ / Lightning Lane'], hint: 'парки Disneyland в США, Париже, Токио, Гонконге и Шанхае — входные билеты, парк-хоппер и проход без очереди' },
+  { slug: 'universal-studios', name: 'Universal Studios', cat: 'Билеты', domain: 'universalstudios.com', price: 0, tiers: ['1-Day 1-Park', 'Park-to-Park', 'Express Pass', 'Annual Pass'], hint: 'парки Universal Studios в Орландо, Голливуде, Японии и Сингапуре с зонами Гарри Поттера и Super Nintendo World' },
+  { slug: 'ghibli-park', name: 'Ghibli Park', cat: 'Билеты', domain: 'ghibli-park.jp', price: 0, tiers: ['Стандартный билет', 'Grand Warehouse', 'Полный билет (все зоны)'], hint: 'парк студии Ghibli под Нагоей — билеты раскупают за месяцы, нужна оплата с японской/зарубежной карты' },
+  { slug: 'teamlab', name: 'teamLab', cat: 'Билеты', domain: 'teamlab.art', price: 0, tiers: ['teamLab Borderless', 'teamLab Planets', 'Комбо-билет'], hint: 'цифровые арт-музеи teamLab в Токио и других городах с интерактивными инсталляциями' },
+  { slug: 'louvre', name: 'Louvre', cat: 'Билеты', domain: 'louvre.fr', price: 0, tiers: ['Входной билет', 'Билет + аудиогид', 'Экскурсия'], hint: 'Лувр в Париже — вход без очереди по сеансам, бронируется заранее на сайте музея' },
+  { slug: 'eiffel-tower', name: 'Eiffel Tower', cat: 'Билеты', domain: 'toureiffel.paris', price: 0, tiers: ['2-й этаж (лифт)', 'Вершина (лифт)', 'По лестнице'], hint: 'Эйфелева башня в Париже — билеты на лифт, вершину и подъём по лестнице' },
+  { slug: 'burj-khalifa', name: 'Burj Khalifa', cat: 'Билеты', domain: 'burjkhalifa.ae', price: 0, tiers: ['At the Top (124/125)', 'At the Top SKY (148)', 'Prime time'], hint: 'смотровые площадки Бурдж-Халифа в Дубае на 124, 125 и 148 этажах' },
+  { slug: 'museum-of-the-future', name: 'Museum of the Future', cat: 'Билеты', domain: 'museumofthefuture.ae', price: 0, tiers: ['Стандартный билет', 'Дети / льготный'], hint: 'Музей будущего в Дубае — один из самых популярных билетов ОАЭ, бронируется по сеансам' },
+  { slug: 'ticketmaster', name: 'Ticketmaster', cat: 'Билеты', domain: 'ticketmaster.com', price: 0, tiers: ['Билет на концерт', 'Спорт', 'Театр', 'VIP / Platinum'], hint: 'крупнейшая площадка продажи билетов на концерты, спорт и шоу в США и Европе' },
+  { slug: 'eventim', name: 'Eventim', cat: 'Билеты', domain: 'eventim.de', price: 0, tiers: ['Билет на концерт', 'Фестиваль', 'Спорт'], hint: 'крупнейший билетный оператор Европы — концерты, фестивали и спортивные события' },
+  { slug: 'getyourguide', name: 'GetYourGuide', cat: 'Билеты', domain: 'getyourguide.com', price: 0, tiers: ['Экскурсия', 'Билет без очереди', 'Тур на целый день'], hint: 'платформа экскурсий и билетов на достопримечательности по всему миру' },
+  { slug: 'klook', name: 'Klook', cat: 'Билеты', domain: 'klook.com', price: 0, tiers: ['Билет на аттракцион', 'Экскурсия', 'Трансфер', 'eSIM'], hint: 'сервис билетов и развлечений с фокусом на Азию — парки, экскурсии, транспорт' },
+  { slug: 'viator', name: 'Viator', cat: 'Билеты', domain: 'viator.com', price: 0, tiers: ['Экскурсия', 'Тур', 'Билет на достопримечательность'], hint: 'сервис экскурсий и туров от Tripadvisor по всему миру' },
+
+  // Зарубежные магазины
+  { slug: 'farfetch', name: 'Farfetch', cat: 'Магазины', domain: 'farfetch.com', price: 0, tiers: ['Оплата заказа', 'Предзаказ'], hint: 'люксовый онлайн-ритейлер дизайнерской одежды и обуви со всего мира' },
+  { slug: 'amazon', name: 'Amazon', cat: 'Магазины', domain: 'amazon.com', price: 0, tiers: ['Оплата заказа', 'Prime', 'Цифровой товар'], hint: 'крупнейший в мире маркетплейс — электроника, книги, товары для дома и не только' },
+  { slug: 'ebay', name: 'eBay', cat: 'Магазины', domain: 'ebay.com', price: 0, tiers: ['Оплата лота', 'Buy It Now', 'Аукцион'], hint: 'международный аукцион и маркетплейс новых и б/у товаров' },
+  { slug: 'etsy', name: 'Etsy', cat: 'Магазины', domain: 'etsy.com', price: 0, tiers: ['Оплата заказа', 'Цифровой товар'], hint: 'маркетплейс handmade-товаров, винтажа и цифровых файлов' },
+  { slug: 'stockx', name: 'StockX', cat: 'Магазины', domain: 'stockx.com', price: 0, tiers: ['Оплата заказа', 'Кроссовки', 'Аксессуары'], hint: 'площадка перепродажи лимитированных кроссовок, одежды и электроники' },
+  { slug: 'goat', name: 'GOAT', cat: 'Магазины', domain: 'goat.com', price: 0, tiers: ['Оплата заказа', 'Кроссовки'], hint: 'маркетплейс редких и новых кроссовок с проверкой подлинности' },
+  { slug: 'nike', name: 'Nike', cat: 'Магазины', domain: 'nike.com', price: 0, tiers: ['Оплата заказа', 'SNKRS дроп'], hint: 'официальный магазин Nike, включая релизы SNKRS' },
+  { slug: 'adidas', name: 'Adidas', cat: 'Магазины', domain: 'adidas.com', price: 0, tiers: ['Оплата заказа', 'Confirmed дроп'], hint: 'официальный магазин Adidas и приложение Confirmed для дропов' },
+  { slug: 'zara', name: 'Zara', cat: 'Магазины', domain: 'zara.com', price: 0, tiers: ['Оплата заказа'], hint: 'международный магазин одежды Zara с доставкой по миру' },
+  { slug: 'hm', name: 'H&M', cat: 'Магазины', domain: 'hm.com', price: 0, tiers: ['Оплата заказа'], hint: 'сеть магазинов одежды H&M с онлайн-заказами' },
+  { slug: 'asos', name: 'ASOS', cat: 'Магазины', domain: 'asos.com', price: 0, tiers: ['Оплата заказа', 'Premier доставка'], hint: 'британский онлайн-магазин одежды и обуви с доставкой по миру' },
+  { slug: 'shein', name: 'Shein', cat: 'Магазины', domain: 'shein.com', price: 0, tiers: ['Оплата заказа'], hint: 'популярный магазин доступной одежды и аксессуаров' },
+  { slug: 'iherb', name: 'iHerb', cat: 'Магазины', domain: 'iherb.com', price: 0, tiers: ['Оплата заказа', 'Доставка в РФ'], hint: 'магазин витаминов, БАДов и натуральных товаров с доставкой в Россию' },
+
+  // Gift Cards
+  { slug: 'app-store-gift-card', name: 'App Store Gift Card', cat: 'GiftCards', domain: 'apple.com', price: 0, tiers: ['$10', '$25', '$50', '$100'], hint: 'подарочная карта Apple для App Store, iTunes, iCloud и подписок' },
+  { slug: 'google-play-gift-card', name: 'Google Play Gift Card', cat: 'GiftCards', domain: 'play.google.com', price: 0, tiers: ['$10', '$25', '$50', '$100'], hint: 'подарочная карта Google Play для приложений, игр и подписок на Android' },
+  { slug: 'steam-gift-card', name: 'Steam Gift Card', cat: 'GiftCards', domain: 'steampowered.com', price: 0, tiers: ['$10', '$25', '$50', '$100'], hint: 'подарочная карта Steam для пополнения кошелька и покупки игр' },
+  { slug: 'playstation-gift-card', name: 'PlayStation Gift Card', cat: 'GiftCards', domain: 'playstation.com', price: 0, tiers: ['$10', '$25', '$50', '$100'], hint: 'карта пополнения PlayStation Store для игр, DLC и PS Plus' },
+  { slug: 'xbox-gift-card', name: 'Xbox Gift Card', cat: 'GiftCards', domain: 'xbox.com', price: 0, tiers: ['$10', '$25', '$50', '$100'], hint: 'подарочная карта Xbox / Microsoft для игр, DLC и Game Pass' },
+  { slug: 'nintendo-eshop-gift-card', name: 'Nintendo eShop Gift Card', cat: 'GiftCards', domain: 'nintendo.com', price: 0, tiers: ['$10', '$20', '$35', '$50'], hint: 'карта пополнения Nintendo eShop для игр на Switch' },
+  { slug: 'roblox-gift-card', name: 'Roblox Gift Card', cat: 'GiftCards', domain: 'roblox.com', price: 0, tiers: ['$10', '$25', '$50', '$100'], hint: 'подарочная карта Roblox для покупки Robux и премиум-подписки' },
+  { slug: 'spotify-gift-card', name: 'Spotify Gift Card', cat: 'GiftCards', domain: 'spotify.com', price: 0, tiers: ['$10', '$30', '$60'], hint: 'подарочная карта Spotify для оплаты Premium-подписки' },
+  { slug: 'netflix-gift-card', name: 'Netflix Gift Card', cat: 'GiftCards', domain: 'netflix.com', price: 0, tiers: ['$25', '$50', '$100'], hint: 'подарочная карта Netflix для пополнения баланса аккаунта' },
+  { slug: 'amazon-gift-card', name: 'Amazon Gift Card', cat: 'GiftCards', domain: 'amazon.com', price: 0, tiers: ['$25', '$50', '$100'], hint: 'подарочная карта Amazon для покупок на крупнейшем маркетплейсе' },
+
+  // Игровые ассеты и 3D-модели
+  { slug: 'unity-asset-store', name: 'Unity Asset Store', cat: 'Ассеты', domain: 'assetstore.unity.com', price: 0, tiers: ['Оплата ассета', 'Бандл', 'Подписка Unity'], hint: 'магазин готовых ассетов, моделей и инструментов для движка Unity' },
+  { slug: 'unreal-engine-marketplace', name: 'Unreal Engine Marketplace', cat: 'Ассеты', domain: 'unrealengine.com', price: 0, tiers: ['Оплата ассета', 'Fab-контент'], hint: 'маркетплейс ассетов и моделей для Unreal Engine (теперь на платформе Fab)' },
+  { slug: 'fab', name: 'Fab', cat: 'Ассеты', domain: 'fab.com', price: 0, tiers: ['3D-модель', 'Материалы', 'VFX / звук'], hint: 'единый маркетплейс цифрового контента от Epic Games — модели, материалы, ассеты' },
+  { slug: 'cgtrader', name: 'CGTrader', cat: 'Ассеты', domain: 'cgtrader.com', price: 0, tiers: ['3D-модель', 'PBR-модель', 'Лицензия Editorial'], hint: 'крупный маркетплейс 3D-моделей для игр, AR/VR и визуализации' },
+  { slug: 'turbosquid', name: 'TurboSquid', cat: 'Ассеты', domain: 'turbosquid.com', price: 0, tiers: ['3D-модель', 'StemCell', 'Расширенная лицензия'], hint: 'один из старейших стоков 3D-моделей для CG и игр' },
+  { slug: 'sketchfab', name: 'Sketchfab', cat: 'Ассеты', domain: 'sketchfab.com', price: 0, tiers: ['Оплата модели', 'Подписка Pro'], hint: 'платформа публикации и продажи 3D-моделей с просмотром в браузере' },
+  { slug: 'artstation-marketplace', name: 'ArtStation Marketplace', cat: 'Ассеты', domain: 'artstation.com', price: 0, tiers: ['Ассет / браши', 'Текстуры', 'Курс / туториал'], hint: 'маркетплейс брашей, текстур и обучающих материалов для художников' },
+  { slug: 'envato-elements', name: 'Envato Elements', cat: 'Ассеты', domain: 'elements.envato.com', price: 0, tiers: ['Месяц ($16.50/мес)', 'Год ($198/год)'], hint: 'безлимитная подписка на шаблоны, графику, видео и 3D-ассеты' },
 ];
 
 // Current (2026) tariff lists per service. These override the rough
@@ -326,7 +416,23 @@ for (const service of SERVICES) {
   if (prices.length) service.price = Math.min(...prices);
 }
 
+// New-vertical services (gift cards, Envato, etc.) aren't in
+// TARIFF_OVERRIDES but may carry "$NN" tiers. Derive their rough cheapest
+// price from those tiers so the SEO prose can show a real minimum. Tickets
+// and shops have no "$" tiers and stay at 0 → "цена по заказу".
+for (const service of SERVICES) {
+  if (service.price) continue;
+  const prices = (service.tiers || [])
+    .map((t) => {
+      const m = String(t).match(/\$\s*(\d+(?:[.,]\d+)?)/);
+      return m ? Math.round(Number(m[1].replace(',', '.')) * 80 + 1000) : null;
+    })
+    .filter((x) => x !== null);
+  if (prices.length) service.price = Math.min(...prices);
+}
+
 // SEO intent templates — distinct URL slug patterns and content angles.
+// These six apply to the original subscription-style services.
 export const INTENTS = [
   { key: 'oplata', slug: (s) => `oplata-${s}`,            title: 'Оплата' },
   { key: 'kak',    slug: (s) => `kak-oplatit-${s}`,       title: 'Как оплатить' },
@@ -337,3 +443,48 @@ export const INTENTS = [
 ];
 
 export const YEAR = 2026;
+
+// ---- New verticals: intents + per-category routing ----
+// Each new category ("kind") gets its own curated set of intents so the
+// generator builds a focused, non-spammy set of pages with distinct copy
+// per vertical instead of every intent for every service.
+
+// Returns the category kind ('subscription' by default). Single source of
+// truth: the `kind` field on the category in CATEGORIES.
+export function kindOf(cat) {
+  return (CATEGORIES[cat] && CATEGORIES[cat].kind) || 'subscription';
+}
+
+// Intent registry for the new verticals. Keys match NEW_RENDERERS in
+// templates.mjs. Slugs are unique latin kebab-case and never collide with
+// the original INTENTS because the new services have their own slugs.
+const NEW_INTENT_DEFS = {
+  oplata:                       { key: 'oplata',                       slug: (s) => `oplata-${s}`,                       title: 'Оплата' },
+  kak:                          { key: 'kak',                          slug: (s) => `kak-oplatit-${s}`,                  title: 'Как оплатить' },
+  rf:                           { key: 'rf',                           slug: (s) => `${s}-iz-rossii`,                    title: 'Из России' },
+  cena:                         { key: 'cena',                         slug: (s) => `${s}-cena`,                         title: 'Цена' },
+  year:                         { key: 'year',                         slug: (s) => `${s}-${YEAR}`,                      title: `В ${YEAR}` },
+  'kupit-bilet':                { key: 'kupit-bilet',                  slug: (s) => `kupit-bilet-${s}`,                  title: 'Купить билет' },
+  'oplata-biletov':             { key: 'oplata-biletov',               slug: (s) => `oplata-biletov-${s}`,               title: 'Оплата билетов' },
+  'oplata-dostoprimechatelnosti': { key: 'oplata-dostoprimechatelnosti', slug: (s) => `oplata-dostoprimechatelnosti-${s}`, title: 'Достопримечательности' },
+  'za-granicey':                { key: 'za-granicey',                  slug: (s) => `${s}-oplata-za-granicey`,           title: 'Оплата за границей' },
+  'oplata-magazina':            { key: 'oplata-magazina',              slug: (s) => `oplata-magazina-${s}`,              title: 'Оплата магазина' },
+  'kupit-gift-card':            { key: 'kupit-gift-card',              slug: (s) => `kupit-gift-card-${s}`,              title: 'Купить Gift Card' },
+  'kupit-asset':                { key: 'kupit-asset',                  slug: (s) => `kupit-asset-${s}`,                  title: 'Купить ассет' },
+};
+
+// Which intents each new vertical gets. Curated to keep the page set
+// meaningful (no "подписка" page for a one-off ticket, etc.).
+export const KIND_INTENTS = {
+  ticket:   ['oplata', 'kak', 'rf', 'cena', 'year', 'kupit-bilet', 'oplata-biletov', 'oplata-dostoprimechatelnosti', 'za-granicey'].map((k) => NEW_INTENT_DEFS[k]),
+  shop:     ['oplata', 'kak', 'rf', 'cena', 'year', 'oplata-magazina', 'za-granicey'].map((k) => NEW_INTENT_DEFS[k]),
+  giftcard: ['oplata', 'kak', 'rf', 'cena', 'year', 'kupit-gift-card'].map((k) => NEW_INTENT_DEFS[k]),
+  asset:    ['oplata', 'kak', 'rf', 'cena', 'year', 'kupit-asset', 'za-granicey'].map((k) => NEW_INTENT_DEFS[k]),
+};
+
+// Resolve the intent list for any service. Original services keep INTENTS;
+// new-vertical services use their kind's curated list.
+export function intentsForService(service) {
+  const kind = kindOf(service.cat);
+  return kind === 'subscription' ? INTENTS : KIND_INTENTS[kind];
+}
