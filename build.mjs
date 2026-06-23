@@ -116,8 +116,10 @@ const CATALOG_LOGOS = {
   Sketchfab: 'pp-logo-sketchfab.svg',
   'ArtStation Marketplace': 'pp-logo-artstation.svg',
   'Envato Elements': 'pp-logo-envato.svg',
+  TurboSquid: 'pp-logo-turbosquid.svg',
   Ticketmaster: 'pp-logo-ticketmaster.svg',
   Klook: 'pp-logo-klook.svg',
+  GetYourGuide: 'pp-logo-getyourguide.svg',
 };
 
 function buildCatalogInjection() {
