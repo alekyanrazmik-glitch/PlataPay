@@ -544,48 +544,69 @@ document.addEventListener('DOMContentLoaded',t_setvisRecs);}})();</script></head
   function logoSources(s){
     const out=[];
     const d=domains[s.name];
-    // 1) ВАШ логотип, загруженный в Tilda — высший приоритет (если поле logo заполнено)
+    // 1) ВАШ логотип, загруженный вручную — высший приоритет (если поле logo заполнено)
     if(s.logo) out.push(s.logo);
-    // 2) настоящий логотип бренда
-    if(d) out.push("https://logo.clearbit.com/"+d);
-    // 3) монохромный значок Simple Icons
+    // 2) монохромный значок Simple Icons (если задан slug)
     if(s.slug) out.push("https://cdn.simpleicons.org/"+s.slug+"/white");
-    // 4) favicon как последний запас
+    // 3) фавиконка бренда — надёжные источники, доступные из РФ.
+    //    Clearbit Logo API отключён с конца 2025 года, поэтому больше
+    //    его не используем: он лишь добавлял зависший первый запрос.
     if(d){
+      out.push("https://www.google.com/s2/favicons?domain="+d+"&sz=128");
       out.push("https://icons.duckduckgo.com/ip3/"+d+".ico");
-      out.push("https://www.google.com/s2/favicons?domain="+d+"&sz=64");
     }
     return out;
   }
 
-  function iconHTML(s){
-    const letter=s.name[0];
-    const srcs=logoSources(s);
-    if(!srcs.length) return '<span class="pp-ico badge">'+letter+'</span>';
-    // список запасных ссылок кладём в data-fallbacks; onerror берёт следующую,
-    // а когда список пуст — заменяет картинку на букву
-    const first=srcs[0];
-    const rest=srcs.slice(1).join("|");
-    // bg может быть: цвет "#xxxxxx" (фирменная плашка) | 1 (белая) | отсутствует (прозрачная)
-    let style="";
-    if(typeof s.bg==="string"){ style=' style="background:'+s.bg+';padding:11px"'; }
-    else if(s.bg===1){ style=' style="background:#fff"'; }
-    return '<span class="pp-ico"'+style+'><img loading="lazy" alt="'+s.name+'" src="'+first+'" '
-      +'data-fb="'+rest+'" data-letter="'+letter+'" '
-      +'onerror="ppFallback(this);"></span>';
+  // экранируем значения, попадающие в HTML-атрибуты
+  function esc(v){
+    return String(v).replace(/&/g,"&amp;").replace(/"/g,"&quot;")
+      .replace(/</g,"&lt;").replace(/>/g,"&gt;");
   }
 
-  // обработчик переключения на следующий источник (глобальный, т.к. вызывается из onerror)
-  window.ppFallback = window.ppFallback || function(img){
-    const list=(img.getAttribute("data-fb")||"").split("|").filter(Boolean);
-    if(list.length){
-      img.setAttribute("data-fb", list.slice(1).join("|"));
-      img.src=list[0];
-    } else {
-      const p=img.parentNode;
-      p.className="pp-ico badge";
-      p.textContent=img.getAttribute("data-letter")||"?";
-    }
+  // Логотип всегда стартует как аккуратная буквенная плашка. Так
+  // пользователь никогда не видит «битую» картинку, если внешний
+  // источник логотипа медленный или недоступен (например, заблокирован
+  // в РФ). Настоящий логотип подгружается в фоне и подменяет плашку
+  // только после успешной загрузки — см. ppHydrateLogos.
+  function iconHTML(s){
+    const letter=(s.name[0]||"?").toUpperCase();
+    const srcs=logoSources(s);
+    // bg может быть: цвет "#xxxxxx" (фирменная плашка) | 1 (белая) | отсутствует
+    let attrs=' data-letter="'+esc(letter)+'"';
+    if(srcs.length) attrs+=' data-srcs="'+esc(srcs.join("|"))+'"';
+    if(typeof s.bg==="string") attrs+=' data-bg="'+esc(s.bg)+'"';
+    else if(s.bg===1) attrs+=' data-bg="1"';
+    return '<span class="pp-ico badge"'+attrs+'>'+esc(letter)+'</span>';
+  }
+
+  // Фоновая загрузка логотипов: для каждой плашки по очереди пробуем
+  // источники и, как только один реально загрузился, заменяем букву на
+  // картинку. Если не загрузился ни один — остаётся буквенная плашка.
+  window.ppHydrateLogos = window.ppHydrateLogos || function(root){
+    (root||document).querySelectorAll(".pp-ico.badge[data-srcs]").forEach(function(el){
+      if(el.dataset.ppHydrated) return;
+      el.dataset.ppHydrated="1";
+      var srcs=(el.getAttribute("data-srcs")||"").split("|").filter(Boolean);
+      var bg=el.getAttribute("data-bg");
+      var name=el.getAttribute("data-letter")||"";
+      (function tryNext(i){
+        if(i>=srcs.length) return; // оставляем буквенную плашку
+        var im=new Image();
+        im.onload=function(){
+          el.className="pp-ico";
+          el.removeAttribute("style");
+          if(bg && bg!=="1"){ el.style.background=bg; el.style.padding="11px"; }
+          else if(bg==="1"){ el.style.background="#fff"; }
+          el.textContent="";
+          var img=document.createElement("img");
+          img.loading="lazy"; img.alt=name; img.src=srcs[i];
+          el.appendChild(img);
+        };
+        im.onerror=function(){ tryNext(i+1); };
+        im.src=srcs[i];
+      })(0);
+    });
   };
 
   function ctaCard(){
@@ -623,6 +644,7 @@ document.addEventListener('DOMContentLoaded',t_setvisRecs);}})();</script></head
         return;
       }
       gridEl.innerHTML=sectionHTML("", list, true);
+      ppHydrateLogos(gridEl);
       return;
     }
 
@@ -637,6 +659,7 @@ document.addEventListener('DOMContentLoaded',t_setvisRecs);}})();</script></head
     // карточка "нет нужного сервиса" — отдельной секцией в самом низу
     out+=sectionHTML("", [], true);
     gridEl.innerHTML=out;
+    ppHydrateLogos(gridEl);
   }
 
   searchEl.addEventListener("input",function(){query=this.value; renderCards();});
