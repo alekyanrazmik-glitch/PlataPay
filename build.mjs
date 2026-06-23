@@ -84,6 +84,37 @@ const searchLayoutFix = `
 // into the catalog page's hand-written SERVICES / CATS / domains arrays.
 // No-op on any page that doesn't carry those markers (i.e. everything
 // except the catalog), so it's safe to run from the shared patchPage.
+// Local brand logos for the new verticals, bundled in tilda-original/ as
+// recoloured simple-icons SVGs (see scratch_gen_logos.mjs history). They
+// ship with the site, so these cards never wait on a slow/blocked external
+// favicon. bg:1 puts them on the white plate so dark marks stay visible.
+// Brands missing here (e.g. Amazon/Xbox/Nintendo — removed from
+// simple-icons) gracefully fall back to favicon → letter badge.
+const CATALOG_LOGOS = {
+  'App Store Gift Card': 'pp-logo-appstore.svg',
+  'Google Play Gift Card': 'pp-logo-googleplay.svg',
+  'Steam Gift Card': 'pp-logo-steam.svg',
+  'PlayStation Gift Card': 'pp-logo-playstation.svg',
+  'Roblox Gift Card': 'pp-logo-roblox.svg',
+  'Spotify Gift Card': 'pp-logo-spotify.svg',
+  'Netflix Gift Card': 'pp-logo-netflix.svg',
+  Farfetch: 'pp-logo-farfetch.svg',
+  eBay: 'pp-logo-ebay.svg',
+  Etsy: 'pp-logo-etsy.svg',
+  StockX: 'pp-logo-stockx.svg',
+  Nike: 'pp-logo-nike.svg',
+  Adidas: 'pp-logo-adidas.svg',
+  Zara: 'pp-logo-zara.svg',
+  'H&M': 'pp-logo-handm.svg',
+  'Unity Asset Store': 'pp-logo-unity.svg',
+  'Unreal Engine Marketplace': 'pp-logo-unrealengine.svg',
+  Sketchfab: 'pp-logo-sketchfab.svg',
+  'ArtStation Marketplace': 'pp-logo-artstation.svg',
+  'Envato Elements': 'pp-logo-envato.svg',
+  Ticketmaster: 'pp-logo-ticketmaster.svg',
+  Klook: 'pp-logo-klook.svg',
+};
+
 function buildCatalogInjection() {
   const KIND_DESC = {
     ticket: 'Билеты и вход',
@@ -97,7 +128,9 @@ function buildCatalogInjection() {
   const servicesJs = newServices
     .map((s) => {
       const desc = KIND_DESC[CAT_CATEGORIES[s.cat].kind] || 'Оплата';
-      return `    {name:"${s.name}", desc:"${desc}", price:"650 ₽", cat:"${s.cat}", url:"/#popupforma"},`;
+      const logo = CATALOG_LOGOS[s.name];
+      const logoJs = logo ? `logo:"images/${logo}", bg:1, ` : '';
+      return `    {${logoJs}name:"${s.name}", desc:"${desc}", price:"650 ₽", cat:"${s.cat}", url:"/#popupforma"},`;
     })
     .join('\n');
   const domainsJs = newServices
