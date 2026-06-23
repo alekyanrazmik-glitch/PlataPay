@@ -202,8 +202,6 @@ export const SERVICES = [
   { slug: 'patreon', name: 'Patreon', cat: 'Бизнес', logo: 'Patreon.PNG', price: 500, tiers: ['от $3 и выше'], hint: 'подписка на любимых авторов: ютуберов, музыкантов, иллюстраторов' },
   { slug: 'boosty', name: 'Boosty', cat: 'Бизнес', logo: 'Boosty.PNG', price: 500, tiers: ['разные тиры'], hint: 'российская альтернатива Patreon, но автор может быть в любой стране' },
   { slug: 'ko-fi', name: 'Ko-fi', cat: 'Бизнес', logo: 'Ko-fi.PNG', price: 300, tiers: ['разовая поддержка', 'Gold'], hint: 'площадка чаевых и микро-донатов авторам' },
-  { slug: 'onlyfans', name: 'OnlyFans', cat: 'Бизнес', logo: 'OnlyFans.PNG', price: 1000, tiers: ['индивидуально'], hint: 'подписки на закрытый контент авторов' },
-  { slug: 'fansly', name: 'Fansly', cat: 'Бизнес', logo: 'Fansly.PNG', price: 1000, tiers: ['индивидуально'], hint: 'альтернатива OnlyFans с похожей моделью подписок' },
   { slug: 'x-premium', name: 'X Premium', cat: 'Бизнес', logo: 'X%20%28twitter%29%20Premium.PNG', price: 800, tiers: ['Basic ($3)', 'Premium ($8)', 'Premium+ ($16)'], hint: 'подписка X (Twitter) с галочкой, длинными постами и Grok внутри' },
 
   // Маркет
