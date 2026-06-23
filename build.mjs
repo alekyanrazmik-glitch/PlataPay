@@ -84,20 +84,25 @@ const searchLayoutFix = `
 // into the catalog page's hand-written SERVICES / CATS / domains arrays.
 // No-op on any page that doesn't carry those markers (i.e. everything
 // except the catalog), so it's safe to run from the shared patchPage.
-// Local brand logos for the new verticals, bundled in tilda-original/ as
-// recoloured simple-icons SVGs (see scratch_gen_logos.mjs history). They
-// ship with the site, so these cards never wait on a slow/blocked external
-// favicon. bg:1 puts them on the white plate so dark marks stay visible.
-// Brands missing here (e.g. Amazon/Xbox/Nintendo — removed from
-// simple-icons) gracefully fall back to favicon → letter badge.
+// Local brand logos for the new verticals, bundled in tilda-original/ so
+// these cards never wait on a slow/RU-blocked external favicon. Most are
+// recoloured simple-icons paths; Amazon/Xbox/Nintendo (dropped from
+// simple-icons) use the official marks from homarr-labs/dashboard-icons,
+// with Xbox recoloured to its brand green. bg:1 puts every mark on the
+// white plate so dark logos stay visible. Anything not listed here falls
+// back gracefully to favicon → letter badge.
 const CATALOG_LOGOS = {
   'App Store Gift Card': 'pp-logo-appstore.svg',
   'Google Play Gift Card': 'pp-logo-googleplay.svg',
   'Steam Gift Card': 'pp-logo-steam.svg',
   'PlayStation Gift Card': 'pp-logo-playstation.svg',
+  'Xbox Gift Card': 'pp-logo-xbox.svg',
+  'Nintendo eShop Gift Card': 'pp-logo-nintendoswitch.svg',
   'Roblox Gift Card': 'pp-logo-roblox.svg',
   'Spotify Gift Card': 'pp-logo-spotify.svg',
   'Netflix Gift Card': 'pp-logo-netflix.svg',
+  'Amazon Gift Card': 'pp-logo-amazon.svg',
+  Amazon: 'pp-logo-amazon.svg',
   Farfetch: 'pp-logo-farfetch.svg',
   eBay: 'pp-logo-ebay.svg',
   Etsy: 'pp-logo-etsy.svg',
