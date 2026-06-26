@@ -17,6 +17,7 @@ app.use('/api/webhook', express.raw({ type: '*/*' }));
 app.use(express.json());
 app.use(cors({ origin: process.env.ALLOWED_ORIGIN || '*' }));
 
+app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 app.use('/api', paymentRoutes);
 
 // success.html / fail.html served from server/public/
