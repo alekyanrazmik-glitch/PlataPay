@@ -13,7 +13,7 @@
   .tag{font-size:12px;letter-spacing:.12em;color:#22C55E;text-transform:uppercase;font-weight:600;margin-bottom:12px;}
   h1{font-size:36px;margin:0 0 12px;font-weight:700;letter-spacing:-.02em;}
   p{color:#9fb2d4;max-width:460px;margin:0 0 32px;line-height:1.6;font-size:16px;}
-  .order-box{background:#0c1f40;border:1px solid #1d3a6b;border-radius:14px;padding:18px 24px;margin-bottom:32px;max-width:420px;width:100%;text-align:left;}
+  .order-box{background:#0c1f40;border:1px solid #1d3a6b;border-radius:14px;padding:18px 24px;margin-bottom:32px;max-width:420px;width:100%;text-align:left;display:none;}
   .order-box .row{display:flex;justify-content:space-between;gap:12px;margin-bottom:8px;font-size:14px;}
   .order-box .row:last-child{margin-bottom:0;}
   .order-box .lbl{color:#9fb2d4;}
@@ -24,7 +24,6 @@
   a.btn:hover{filter:brightness(1.1);}
   .primary{background:linear-gradient(180deg,#2e7bff,#1e5fd6);color:#fff;}
   .ghost{background:#0c1f40;color:#eef3ff;border:1px solid #1d3a6b;}
-  #order-info{display:none;}
 </style>
 </head>
 <body>
@@ -37,7 +36,6 @@
   <div class="order-box" id="order-info">
     <div class="row"><span class="lbl">Сервис</span><span class="val" id="ord-service">—</span></div>
     <div class="row"><span class="lbl">Сумма</span><span class="val" id="ord-amount">—</span></div>
-    <div class="row"><span class="lbl">Контакт</span><span class="val" id="ord-contact">—</span></div>
     <div class="row"><span class="lbl">Статус</span><span class="val status-paid">✓ Оплачено</span></div>
     <div class="row"><span class="lbl">Заказ №</span><span class="val" id="ord-id" style="font-size:12px;font-family:monospace">—</span></div>
   </div>
@@ -49,21 +47,20 @@
 </div>
 <script>
 (function(){
-  var params = new URLSearchParams(location.search);
-  var orderId = params.get('order_id');
-  if (!orderId) return;
+  // Order details are passed as URL params by create-invoice to avoid
+  // needing a stateful database (serverless environment).
+  var p = new URLSearchParams(location.search);
+  var service  = p.get('service');
+  var amount   = p.get('amount');
+  var orderId  = p.get('order_id');
 
-  fetch('/api/order/' + orderId)
-    .then(function(r){ return r.json(); })
-    .then(function(d){
-      if (d.error) return;
-      document.getElementById('ord-service').textContent = d.service || '—';
-      document.getElementById('ord-amount').textContent  = (d.amount ? d.amount.toLocaleString('ru-RU') + ' ₽' : '—');
-      document.getElementById('ord-contact').textContent = d.contact || '—';
-      document.getElementById('ord-id').textContent      = d.id || '—';
-      document.getElementById('order-info').style.display = 'block';
-    })
-    .catch(function(){});
+  if (!service && !orderId) return;
+
+  if (service)  document.getElementById('ord-service').textContent = service;
+  if (amount)   document.getElementById('ord-amount').textContent  = Number(amount).toLocaleString('ru-RU') + ' ₽';
+  if (orderId)  document.getElementById('ord-id').textContent      = orderId;
+
+  document.getElementById('order-info').style.display = 'block';
 })();
 </script>
 </body>

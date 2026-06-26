@@ -1,0 +1,10 @@
+{
+  "buildCommand": "node build.mjs && cp server/public/success.html out/success.html && cp server/public/fail.html out/fail.html",
+  "outputDirectory": "out",
+  "functions": {
+    "api/**/*.js": {
+      "runtime": "nodejs20.x",
+      "maxDuration": 30
+    }
+  }
+}
