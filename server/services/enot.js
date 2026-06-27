@@ -2,7 +2,7 @@
 
 const ENOT_CREATE_URL = 'https://api.enot.io/invoice/create';
 
-async function createInvoice({ orderId, amount, description }) {
+async function createInvoice({ orderId, amount, description, service, contact }) {
   const apiKey = process.env.ENOT_API_KEY;
   const shopId = process.env.ENOT_SHOP_ID;
 
@@ -20,9 +20,18 @@ async function createInvoice({ orderId, amount, description }) {
     description,
   };
 
+  // Pass service/contact via custom_fields so the webhook can read them
+  // back even if the in-memory order store was cleared by a restart.
+  if (service || contact) {
+    body.custom_fields = { service: service || '', contact: contact || '' };
+  }
+
   if (webhookUrl) body.webhook_url = webhookUrl;
   if (serverUrl) {
-    body.success_url = `${serverUrl}/success?order_id=${orderId}`;
+    // Embed service+amount in the success URL so the success page can
+    // show order details without a database lookup.
+    const q = service ? `&service=${encodeURIComponent(service)}&amount=${amount}` : '';
+    body.success_url = `${serverUrl}/success?order_id=${orderId}${q}`;
     body.fail_url    = `${serverUrl}/fail?order_id=${orderId}`;
   }
 

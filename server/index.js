@@ -37,6 +37,7 @@ app.get('*', (_req, res) => {
   }
 });
 
-app.listen(PORT, () => {
+// Bind to 0.0.0.0 so the server is reachable from outside the container.
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`PlataPay server started on port ${PORT}`);
 });
