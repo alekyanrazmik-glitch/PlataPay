@@ -47,6 +47,13 @@ export function buildEnhancement(baseHref) {
     .pp-mm-mask{align-items:flex-end !important;padding:0 !important;}
     .pp-mm-modal{max-width:100% !important;border-radius:20px 20px 0 0 !important;margin:0 !important;padding-bottom:calc(24px + env(safe-area-inset-bottom)) !important;}
   }
+  /* Footer "finish": the footer uses the same background as the page with
+     no separator, so the bottom of the page reads as unfinished. Add a
+     top divider + subtle gradient lift so the footer looks intentional. */
+  .pp-foot{
+    border-top:1px solid #16315f !important;
+    background:linear-gradient(180deg,#0a1c39,#08172F) !important;
+  }
 </style>
 <style>
   .pp-mm-mask{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:99999;display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;}
