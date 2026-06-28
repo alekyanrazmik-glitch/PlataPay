@@ -93,6 +93,16 @@ export function buildEnhancement(baseHref) {
   .pp-pop-grid{min-width:0;}
   .pp-pop-grid>.pp-pc,.pp-pc{min-width:0;}
   .pp-pc-name,.pp-pc-desc{overflow-wrap:anywhere;}
+  /* Hide the leftover original Tilda reviews/FAQ Zero block — it duplicated
+     the custom block and bled stray green text below the FAQ. */
+  #rec2293276911{display:none !important;}
+  /* Home FAQ as an inline accordion (replaces Tilda popups that jumped the
+     page to the top when a question was closed). */
+  .pp-faq-a{display:none;padding:16px 18px;margin-top:-4px;color:#cfd9ef;font-size:14px;line-height:1.55;background:rgba(46,123,255,.07);border:1px solid #1d3a6b;border-radius:14px;}
+  .pp-faq-a.open{display:block;}
+  .pp-faq-q svg{transition:transform .2s;}
+  .pp-faq-q.open svg{transform:rotate(180deg);}
+  .pp-faq-q.open{background:rgba(46,123,255,.10);border-color:#2e7bff;}
 </style>
 <style>
   .pp-mm-mask{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:99999;display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;}
@@ -386,6 +396,49 @@ export function buildEnhancement(baseHref) {
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fixNav);
   else fixNav();
   setTimeout(fixNav, 500);
+})();
+</script>
+<script>
+(function(){
+  // Home FAQ: turn the popup-linked questions into an inline accordion so
+  // closing one no longer jumps the page to the top.
+  var ANSWERS = {
+    'насколькоэтобезопасно':'Мы работаем только через официальные способы оплаты и не запрашиваем лишние данные. Все детали заказа согласовываются заранее, а подтверждение оплаты предоставляется после выполнения услуги.',
+    'какиеспособыоплатыдоступны':'Мы принимаем оплату удобным для вас способом: через СБП, банковские карты российских и зарубежных банков, а также переводы на банковский счёт. После оформления заявки менеджер предложит доступные варианты и поможет выбрать наиболее удобный и выгодный способ оплаты.',
+    'какбыстропроисходитоплата':'Большинство заказов выполняется в течение 5–15 минут после подтверждения оплаты и получения необходимых данных. В отдельных случаях срок может зависеть от особенностей конкретного сервиса, проверки платежа или времени обработки со стороны поставщика, но мы всегда стараемся выполнить заказ максимально быстро и держим вас в курсе статуса.'
+  };
+  function key(s){ return (s||'').toLowerCase().replace(/[^а-яё]/gi,''); }
+  function init(){
+    var qs = document.querySelectorAll('.pp-faq-q');
+    if(!qs.length) return;
+    for(var i=0;i<qs.length;i++){
+      (function(q){
+        if(q.dataset.ppFaq) return; q.dataset.ppFaq='1';
+        var label = (q.querySelector('span') || q).textContent;
+        var ans = ANSWERS[key(label)];
+        // Drop the popup href so Tilda's popup (and its scroll-to-top on
+        // close) never fires.
+        q.removeAttribute('href');
+        q.setAttribute('role','button');
+        q.style.cursor='pointer';
+        if(!ans) return;
+        var panel = document.createElement('div');
+        panel.className = 'pp-faq-a';
+        panel.textContent = ans;
+        q.parentNode.insertBefore(panel, q.nextSibling);
+        q.addEventListener('click', function(e){
+          e.preventDefault(); e.stopPropagation();
+          if(e.stopImmediatePropagation) e.stopImmediatePropagation();
+          var open = panel.classList.toggle('open');
+          q.classList.toggle('open', open);
+        }, true);
+      })(qs[i]);
+    }
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+  setTimeout(init, 500);
+  setTimeout(init, 1500);
 })();
 </script>
 `;
