@@ -21,9 +21,14 @@ export function buildEnhancement(baseHref) {
 
   return `
 <style id="pp-mobile-hardening">
-  /* Kill horizontal scroll site-wide and keep media within the viewport */
-  html,body{max-width:100%;overflow-x:hidden;}
-  img,svg,video{max-width:100%;}
+  /* Kill horizontal scroll site-wide and keep media within the viewport.
+     position:relative + width:100% on body is required for iOS Safari to
+     actually clamp horizontal overflow — overflow-x:hidden alone lets the
+     page shift right with clipped edges. overflow-x:clip is a stronger
+     modern fallback that does not create a scroll container. */
+  html{overflow-x:hidden;overflow-x:clip;}
+  body{max-width:100%;width:100%;position:relative;overflow-x:hidden;overflow-x:clip;}
+  img,svg,video{max-width:100%;height:auto;}
   /* No grey tap flash on touch controls */
   .pp-cat,.pp-card a,.pp-pay a,.pp-cta a{-webkit-tap-highlight-color:transparent;}
   @media(max-width:768px){
@@ -151,15 +156,24 @@ export function buildEnhancement(baseHref) {
     if (prefill) srv.value = prefill;
     mask.hidden = false;
     document.body.style.overflow = 'hidden';
+    // Push a history entry so the phone "Back" button closes the form
+    // rather than navigating away from the site.
+    if (!(window.history.state && window.history.state.ppMini)) {
+      try { history.pushState({ ppMini: true }, ''); } catch (e) {}
+    }
     setTimeout(function(){ (prefill ? ctc : srv).focus(); }, 50);
   }
-  function closeMini(){
+  function closeMini(fromPop){
     mask.hidden = true;
     document.body.style.overflow = '';
+    if (!fromPop && window.history.state && window.history.state.ppMini) {
+      try { history.back(); } catch (e) {}
+    }
   }
-  mask.querySelector('.pp-mm-close').addEventListener('click', closeMini);
+  mask.querySelector('.pp-mm-close').addEventListener('click', function(){ closeMini(); });
   mask.addEventListener('click', function(e){ if (e.target === mask) closeMini(); });
   document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && !mask.hidden) closeMini(); });
+  window.addEventListener('popstate', function(){ if (!mask.hidden) closeMini(true); });
 
   // Intercept every link that targets the legacy popup, in capture
   // phase so we run before Tilda's own click handler.

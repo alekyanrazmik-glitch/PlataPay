@@ -145,9 +145,14 @@ export function buildPricingUiPatch() {
   .pp-inline-tariffs{margin:0 0 16px;}
   .pp-inline-tariffs .pp-tariff-card{cursor:pointer;}
   .pp-inline-tariffs .pp-tariff-card:hover{transform:translateY(-2px);border-color:var(--svc-accent);box-shadow:0 18px 38px -26px var(--svc-accent),inset 0 1px 0 rgba(255,255,255,.08);}
-  .pp-tariff-mask{position:fixed;inset:0;z-index:100000;background:rgba(3,9,22,.78);backdrop-filter:blur(5px);display:none;align-items:center;justify-content:center;padding:18px;overflow-y:auto;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','Segoe UI',system-ui,sans-serif;}
+  /* align-items:flex-start + margin:auto on the modal centers it when it
+     fits and lets the user scroll to the very top (title + first tariff)
+     when the modal is taller than the viewport. align-items:center would
+     clip the top of a tall modal in a scroll container. */
+  .pp-tariff-mask{position:fixed;inset:0;z-index:100000;background:rgba(3,9,22,.78);backdrop-filter:blur(5px);display:none;align-items:flex-start;justify-content:center;padding:18px;overflow-y:auto;-webkit-overflow-scrolling:touch;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','Segoe UI',system-ui,sans-serif;}
   .pp-tariff-mask.open{display:flex;}
-  .pp-tariff-modal{--svc-accent:#2e7bff;width:100%;max-width:760px;background:linear-gradient(180deg,rgba(12,31,64,.98),rgba(8,23,47,.98));border:1px solid color-mix(in srgb,var(--svc-accent) 45%,#1d3a6b);border-radius:24px;color:#eef3ff;box-shadow:0 30px 90px rgba(0,0,0,.48);position:relative;padding:24px;overflow:hidden;}
+  .pp-tariff-mask *{box-sizing:border-box;}
+  .pp-tariff-modal{--svc-accent:#2e7bff;box-sizing:border-box;margin:auto;width:100%;max-width:760px;background:linear-gradient(180deg,rgba(12,31,64,.98),rgba(8,23,47,.98));border:1px solid color-mix(in srgb,var(--svc-accent) 45%,#1d3a6b);border-radius:24px;color:#eef3ff;box-shadow:0 30px 90px rgba(0,0,0,.48);position:relative;padding:24px;overflow:hidden;}
   .pp-tariff-modal:before{content:"";position:absolute;inset:-120px -90px auto auto;width:280px;height:280px;background:radial-gradient(circle,color-mix(in srgb,var(--svc-accent) 35%,transparent),transparent 68%);pointer-events:none;}
   .pp-tariff-modal:after{content:"";position:absolute;left:-120px;bottom:-160px;width:340px;height:340px;background:radial-gradient(circle,color-mix(in srgb,var(--svc-accent) 18%,transparent),transparent 70%);pointer-events:none;}
   .pp-tariff-modal>*{position:relative;z-index:1;}
@@ -299,6 +304,12 @@ export function buildPricingUiPatch() {
     mask.classList.add('open');
     mask.setAttribute('aria-hidden','false');
     document.body.style.overflow='hidden';
+    // Push a history entry so the phone "Back" button closes the modal
+    // instead of leaving the site. Guard against pushing twice when we
+    // switch between the tariff and checkout views of the same modal.
+    if(!(window.history.state && window.history.state.ppModal)){
+      try{ history.pushState({ppModal:true}, ''); }catch(e){}
+    }
   }
   function openTariffs(s){
     currentService=s;
@@ -311,7 +322,20 @@ export function buildPricingUiPatch() {
     showModal();
     openCheckout(s,tier);
   }
-  function closeModal(){ mask.classList.remove('open'); mask.setAttribute('aria-hidden','true'); document.body.style.overflow=''; }
+  function closeModal(fromPop){
+    mask.classList.remove('open');
+    mask.setAttribute('aria-hidden','true');
+    document.body.style.overflow='';
+    // If the user closed via the UI (× / overlay / Esc), consume the
+    // history entry we pushed. If they closed via the Back button
+    // (fromPop), the entry is already gone — don't pop again.
+    if(!fromPop && window.history.state && window.history.state.ppModal){
+      try{ history.back(); }catch(e){}
+    }
+  }
+  window.addEventListener('popstate', function(){
+    if(mask.classList.contains('open')) closeModal(true);
+  });
   function checkoutHtml(s,tier){
     var priceText = tier && tier.rub ? money(tier.rub) : 'по запросу';
     var tierName = tier ? tier.label : 'Другой тариф / сумма';
