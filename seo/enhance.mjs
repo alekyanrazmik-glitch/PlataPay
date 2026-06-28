@@ -54,6 +54,18 @@ export function buildEnhancement(baseHref) {
     border-top:1px solid #16315f !important;
     background:linear-gradient(180deg,#0a1c39,#08172F) !important;
   }
+  /* Hide the leftover native Tilda T898 floating-contact block. It needs
+     Tilda's external CSS/JS to render as a corner bubble; without it the
+     block dumps inline as a raw white band at the bottom of the page. The
+     footer + Telegram/WhatsApp buttons already cover these contacts. */
+  [data-record-type="898"], .t898{display:none !important;}
+  /* The 2-column "Популярные сервисы" grid overflowed the viewport on
+     phones (right cards clipped) because grid items default to
+     min-width:auto and won't shrink below their content (e.g. "YouTube
+     Premium"). Let them shrink and wrap long names so both columns fit. */
+  .pp-pop-grid{min-width:0;}
+  .pp-pop-grid>.pp-pc,.pp-pc{min-width:0;}
+  .pp-pc-name,.pp-pc-desc{overflow-wrap:anywhere;}
 </style>
 <style>
   .pp-mm-mask{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:99999;display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;}
@@ -342,6 +354,37 @@ export function buildEnhancement(baseHref) {
   }
   setTimeout(wireSearch, 500);
   setTimeout(wireSearch, 1500);
+
+  // -------- Header nav: active highlight (basePath-aware) --------
+  // The inline Tilda script compares data-path ("/", "/catalog"…) to
+  // location.pathname. Under a GitHub Pages project basePath (/PlataPay/)
+  // pathname never matches, so no item gets ".active" and they all look
+  // identical. Compare the link's RESOLVED pathname (via <base>) to the
+  // current pathname instead, which works under any base.
+  function cleanPath(p){ return (p||'').replace(/index\\.html$/,'').replace(/\\/+$/,'') || '/'; }
+  function fixNav(){
+    var links = document.querySelectorAll('.pp-nav-link');
+    if(!links.length) return;
+    var here = cleanPath(location.pathname);
+    for(var i=0;i<links.length;i++){
+      var a = links[i];
+      var raw = a.getAttribute('href') || '';
+      // Anchor links (e.g. "Отзывы" → #Otzivi) point to the home-page
+      // section and are never "active" by path. Normalise them to an
+      // absolute base + #Otzivi so they work from every page.
+      if(/#Otzivi/i.test(raw)){
+        a.setAttribute('href', BASE + '#Otzivi');
+        a.classList.remove('active');
+        continue;
+      }
+      if(raw.charAt(0) === '#'){ a.classList.remove('active'); continue; }
+      if(cleanPath(a.pathname) === here) a.classList.add('active');
+      else a.classList.remove('active');
+    }
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fixNav);
+  else fixNav();
+  setTimeout(fixNav, 500);
 })();
 </script>
 `;
