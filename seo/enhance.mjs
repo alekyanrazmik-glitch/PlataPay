@@ -97,12 +97,13 @@ export function buildEnhancement(baseHref) {
      the custom block and bled stray green text below the FAQ. */
   #rec2293276911{display:none !important;}
   /* Home FAQ as an inline accordion (replaces Tilda popups that jumped the
-     page to the top when a question was closed). */
-  .pp-faq-a{display:none;padding:16px 18px;margin-top:-4px;color:#cfd9ef;font-size:14px;line-height:1.55;background:rgba(46,123,255,.07);border:1px solid #1d3a6b;border-radius:14px;}
-  .pp-faq-a.open{display:block;}
-  .pp-faq-q svg{transition:transform .2s;}
-  .pp-faq-q.open svg{transform:rotate(180deg);}
-  .pp-faq-q.open{background:rgba(46,123,255,.10);border-color:#2e7bff;}
+     page to the top when a question was closed). Scoped to .pp-rf so it does
+     NOT collide with the /faq page, which reuses the .pp-faq-a class. */
+  .pp-rf .pp-faq-a{display:none;padding:16px 18px;margin-top:-4px;color:#cfd9ef;font-size:14px;line-height:1.55;background:rgba(46,123,255,.07);border:1px solid #1d3a6b;border-radius:14px;}
+  .pp-rf .pp-faq-a.open{display:block;}
+  .pp-rf .pp-faq-q svg{transition:transform .2s;}
+  .pp-rf .pp-faq-q.open svg{transform:rotate(180deg);}
+  .pp-rf .pp-faq-q.open{background:rgba(46,123,255,.10);border-color:#2e7bff;}
 </style>
 <style>
   .pp-mm-mask{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:99999;display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;}
@@ -380,12 +381,25 @@ export function buildEnhancement(baseHref) {
     for(var i=0;i<links.length;i++){
       var a = links[i];
       var raw = a.getAttribute('href') || '';
-      // Anchor links (e.g. "Отзывы" → #Otzivi) point to the home-page
-      // section and are never "active" by path. Normalise them to an
-      // absolute base + #Otzivi so they work from every page.
+      // "Отзывы" → reviews section. Normalise href to the home anchor for
+      // cross-page use, and on the home page smooth-scroll to the reviews
+      // block directly (the bare #Otzivi anchor sits in a hidden record and
+      // didn't scroll reliably on desktop).
       if(/#Otzivi/i.test(raw)){
         a.setAttribute('href', BASE + '#Otzivi');
         a.classList.remove('active');
+        if(!a.dataset.ppRev){
+          a.dataset.ppRev='1';
+          a.addEventListener('click', function(e){
+            var rf = document.querySelector('.pp-rf');
+            if(!rf) return; // not home — let the href navigate to home + anchor
+            e.preventDefault();
+            var hdr = document.querySelector('.pp-hdr');
+            var off = (hdr ? hdr.offsetHeight : 0) + 8;
+            var y = rf.getBoundingClientRect().top + window.pageYOffset - off;
+            window.scrollTo({ top: y, behavior: 'smooth' });
+          });
+        }
         continue;
       }
       if(raw.charAt(0) === '#'){ a.classList.remove('active'); continue; }
@@ -409,7 +423,9 @@ export function buildEnhancement(baseHref) {
   };
   function key(s){ return (s||'').toLowerCase().replace(/[^а-яё]/gi,''); }
   function init(){
-    var qs = document.querySelectorAll('.pp-faq-q');
+    // Scope to the home reviews/FAQ block only — the /faq page has its own
+    // accordion (same class names) that must not be touched.
+    var qs = document.querySelectorAll('.pp-rf .pp-faq-q');
     if(!qs.length) return;
     for(var i=0;i<qs.length;i++){
       (function(q){
