@@ -33,8 +33,16 @@ export function buildEnhancement(baseHref) {
   html{overflow-x:hidden;overflow-x:clip;}
   body{max-width:100%;width:100%;position:relative;overflow-x:hidden;overflow-x:clip;}
   img,svg,video{max-width:100%;height:auto;}
-  /* No grey tap flash on touch controls */
-  .pp-cat,.pp-card a,.pp-pay a,.pp-cta a{-webkit-tap-highlight-color:transparent;}
+  /* Crisp, snappy taps: kill the grey tap-flash on every interactive
+     control and set touch-action:manipulation to drop the double-tap
+     delay / accidental zoom — taps register instantly without a flash. */
+  a,button,[role="button"],input,select,textarea,
+  .pp-cat,.pp-q,.pp-nav-link,.pp-hdr-cta,.pp-burger,
+  .pp-pc-pay a,.pp-pay a,.pp-card a,.pp-cta a,.pp-search-btn,
+  .pp-tariff-card,.pp-tariff-pick,.pp-checkout-submit,.pp-mm-go{
+    -webkit-tap-highlight-color:transparent;
+    touch-action:manipulation;
+  }
   @media(max-width:768px){
     .pp-cats{display:flex;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
     .pp-cats::-webkit-scrollbar{display:none;}
@@ -42,6 +50,10 @@ export function buildEnhancement(baseHref) {
     .pp-sec-grid{grid-template-columns:1fr !important;}
     .pp-card{width:100% !important;max-width:100% !important;}
     .pp-card a,.pp-pay a,.pp-cta a{min-height:44px;display:inline-flex;align-items:center;}
+    /* "Оплатить" link on home service cards was only ~30px tall — bump it
+       to a comfortable 44px tap target. */
+    .pp-pc-pay a{min-height:44px;display:inline-flex;align-items:center;justify-content:center;}
+    .pp-q{min-height:44px;}
     .pp-search{width:100% !important;max-width:100% !important;}
     /* 16px input font stops iOS Safari from auto-zooming the page */
     .pp-search input{min-height:44px;font-size:16px;}
