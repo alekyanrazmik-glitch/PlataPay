@@ -8,15 +8,19 @@
 
 import { SERVICES } from './data.mjs';
 
+const BOT = '8842294846:AAEYOKRa-M80_fnZGu1Qk_fbmB7fknIR8UE';
+const CHAT = '523060537';
+const SHEETS =
+  'https://script.google.com/macros/s/AKfycbyy43Ff5kKivrUsaXWEkda7JXNwHrOI-3BJIJp3UG9H8K6cb4DxjpC8eXNPGNEXQEWt/exec';
+
 export function buildEnhancement(baseHref) {
   // Trim services to only the fields the injected JS needs — keeps the
-  // inlined payload small. ~98 entries * ~90 bytes ~ 9 KB.
+  // inlined payload small. ~98 entries * ~80 bytes ~ 8 KB.
   const slim = SERVICES.map((s) => ({
     n: s.name,
     s: s.slug,
     c: s.cat,
     l: s.logo,
-    p: s.price || 0,  // starting price in RUB for payment auto-fill
   }));
 
   return `
@@ -108,22 +112,20 @@ export function buildEnhancement(baseHref) {
   <div class="pp-mm-modal">
     <button class="pp-mm-close" aria-label="Закрыть">×</button>
     <h3>Оплатить сервис</h3>
-    <p class="pp-mm-sub">Укажите сервис, сумму и контакт — счёт создаётся автоматически.</p>
+    <p class="pp-mm-sub">Оставьте контакт — ответим в течение 5–15 минут.</p>
     <div class="pp-mm-body">
       <label for="pp-mm-srv">Какой сервис нужно оплатить?</label>
       <input type="text" id="pp-mm-srv" placeholder="ChatGPT, Spotify, Adobe…" autocomplete="off">
-      <label for="pp-mm-amt">Сумма оплаты, ₽</label>
-      <input type="number" id="pp-mm-amt" placeholder="например, 3200" min="100" step="1">
-      <label for="pp-mm-ctc">Telegram, телефон или email</label>
+      <label for="pp-mm-ctc">Телефон, Telegram или email</label>
       <input type="text" id="pp-mm-ctc" placeholder="+7 999 123-45-67 или @username" autocomplete="off">
       <div class="pp-mm-err" id="pp-mm-err" hidden></div>
-      <button class="pp-mm-go" id="pp-mm-go">Перейти к оплате</button>
+      <button class="pp-mm-go" id="pp-mm-go">Оплатить</button>
       <div class="pp-mm-alt">
         или напрямую:
         <a href="https://t.me/Kimzar_A" target="_blank" rel="noopener">Telegram</a> ·
         <a href="https://wa.me/79676726909" target="_blank" rel="noopener">WhatsApp</a>
       </div>
-      <div class="pp-mm-consent">Нажимая «Перейти к оплате», вы соглашаетесь с <a href="#popuppolicy">политикой обработки данных</a>.</div>
+      <div class="pp-mm-consent">Нажимая «Оплатить», вы соглашаетесь с <a href="#popuppolicy">политикой обработки данных</a>.</div>
     </div>
   </div>
 </div>
@@ -131,6 +133,9 @@ export function buildEnhancement(baseHref) {
 <script>
 (function(){
   var SERVICES = ${JSON.stringify(slim)};
+  var BOT = '${BOT}';
+  var CHAT = '${CHAT}';
+  var SHEETS = '${SHEETS}';
   var LOGO_BASE = 'https://raw.githubusercontent.com/alekyanrazmik-glitch/Just-PlataPay/master/';
   var BASE = '${baseHref}';
 
@@ -139,37 +144,9 @@ export function buildEnhancement(baseHref) {
   var modal = mask.querySelector('.pp-mm-modal');
   var bodyEl = mask.querySelector('.pp-mm-body');
   var srv   = document.getElementById('pp-mm-srv');
-  var amtEl = document.getElementById('pp-mm-amt');
   var ctc   = document.getElementById('pp-mm-ctc');
   var err   = document.getElementById('pp-mm-err');
   var btn   = document.getElementById('pp-mm-go');
-
-  // Build a price lookup map from the inlined SERVICES array
-  var PRICE_MAP = {};
-  for (var _pi = 0; _pi < SERVICES.length; _pi++) {
-    if (SERVICES[_pi].p) PRICE_MAP[SERVICES[_pi].n.toLowerCase()] = SERVICES[_pi].p;
-  }
-
-  function findPrice(name) {
-    if (!name) return 0;
-    var n = name.toLowerCase().trim();
-    if (PRICE_MAP[n]) return PRICE_MAP[n];
-    for (var k in PRICE_MAP) {
-      if (n.indexOf(k) === 0 || k.indexOf(n) === 0) return PRICE_MAP[k];
-    }
-    return 0;
-  }
-
-  // Auto-fill price when user types a service name
-  if (srv && amtEl) {
-    srv.addEventListener('input', function() {
-      if (!amtEl.dataset.userEdited) {
-        var p = findPrice(srv.value);
-        amtEl.value = p > 0 ? p : '';
-      }
-    });
-    amtEl.addEventListener('input', function() { amtEl.dataset.userEdited = '1'; });
-  }
 
   function openMini(prefill){
     if (prefill) srv.value = prefill;
@@ -215,37 +192,38 @@ export function buildEnhancement(baseHref) {
   btn.addEventListener('click', function(){
     err.hidden = true;
     var sv = srv.value.trim();
-    var av = amtEl ? parseInt(amtEl.value, 10) : 0;
     var cv = ctc.value.trim();
+    if (!sv) { err.textContent='Укажите сервис'; err.hidden=false; srv.focus(); return; }
+    if (cv.length < 4) { err.textContent='Введите контакт — телефон, @username или email'; err.hidden=false; ctc.focus(); return; }
+    btn.disabled = true; btn.textContent = 'Отправляем…';
 
-    if (!sv) { err.textContent = 'Укажите сервис'; err.hidden = false; srv.focus(); return; }
-    if (!av || av < 100) { err.textContent = 'Укажите сумму оплаты (минимум 100 ₽)'; err.hidden = false; amtEl && amtEl.focus(); return; }
-    if (cv.length < 4) { err.textContent = 'Введите контакт — телефон, @username или email'; err.hidden = false; ctc.focus(); return; }
+    var msg = [
+      'Заявка с сайта PlataPay',
+      'Сервис: ' + sv,
+      'Контакт: ' + cv,
+      'Страница: https://payoplata.ru' + location.pathname,
+    ].join('\\n');
 
-    btn.disabled = true;
-    btn.textContent = 'Создаём счёт…';
+    var tg = fetch('https://api.telegram.org/bot' + BOT + '/sendMessage', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({chat_id:CHAT, text:msg, parse_mode:'HTML', disable_web_page_preview:true})
+    }).then(function(r){return r.ok;}).catch(function(){return false;});
 
-    fetch('/api/create-invoice', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({service: sv, amount: av, contact: cv})
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      if (data.paymentUrl) {
-        btn.textContent = 'Переходим к оплате…';
-        if (window.ym) window.ym(109522965, 'reachGoal', 'payment_created');
-        window.location.href = data.paymentUrl;
+    var sh = fetch(SHEETS, {
+      method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({source:'main', service:sv, contact:cv, page:location.pathname, ts:Date.now()})
+    }).then(function(){return true;}).catch(function(){return false;});
+
+    Promise.all([tg, sh]).then(function(r){
+      if (r[0] || r[1]) {
+        bodyEl.innerHTML = '<div class="pp-mm-ok"><h3>Заявка принята</h3><p style="color:#cfd9ef;margin:0;">Свяжемся в течение 5–15 минут. Если срочно — <a href="https://t.me/Kimzar_A" target="_blank" style="color:#2e7bff;">@Kimzar_A</a>.</p></div>';
+        if (window.ym) window.ym(109522965, 'reachGoal', 'main_order');
       } else {
-        throw new Error(data.error || 'Не удалось получить ссылку на оплату');
+        err.textContent = 'Не удалось отправить. Напишите в Telegram: @Kimzar_A';
+        err.hidden = false;
+        btn.disabled = false;
+        btn.textContent = 'Оплатить';
       }
-    })
-    .catch(function() {
-      err.innerHTML = 'Ошибка создания счёта. Напишите нам в ' +
-        '<a href="https://t.me/Kimzar_A" target="_blank" rel="noopener" style="color:#7BAEFF">Telegram @Kimzar_A</a>';
-      err.hidden = false;
-      btn.disabled = false;
-      btn.textContent = 'Перейти к оплате';
     });
   });
 
