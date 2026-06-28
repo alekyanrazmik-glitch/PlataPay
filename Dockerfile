@@ -22,21 +22,19 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 
-# wget is used by the Docker HEALTHCHECK below
-RUN apk add --no-cache wget
-
 # Install production dependencies only
 COPY package*.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 
-# Copy server code, the built static site, and the build script
+# Copy server code and the built static site
 COPY --from=build /app/out ./out
 COPY --from=build /app/server ./server
 
 EXPOSE 3000
 
-# Healthcheck hits the /api/health endpoint
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:${PORT}/api/health || exit 1
+# No Docker HEALTHCHECK: Timeweb App Platform runs its own health probe
+# (configured to /api/health in the panel). A container-level HEALTHCHECK
+# left the container in the "starting" state and made the platform mark
+# the deploy as failed before it ever turned "healthy".
 
 CMD ["node", "server/index.js"]
