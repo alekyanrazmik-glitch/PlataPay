@@ -552,10 +552,11 @@ document.addEventListener('DOMContentLoaded',t_setvisRecs);}})();</script></head
     if(d) out.push("https://logo.clearbit.com/"+d);
     // 3) монохромный значок Simple Icons
     if(s.slug) out.push("https://cdn.simpleicons.org/"+s.slug+"/white");
-    // 4) favicon как последний запас
+    // 4) favicon как последний запас (DuckDuckGo). Google s2/favicons убран:
+    //    он отдаёт HTTP 200 с дженерик-иконкой «?» для неизвестных доменов,
+    //    из-за чего onerror не срабатывал и не доходил до буквенной заглушки.
     if(d){
       out.push("https://icons.duckduckgo.com/ip3/"+d+".ico");
-      out.push("https://www.google.com/s2/favicons?domain="+d+"&sz=64");
     }
     return out;
   }
