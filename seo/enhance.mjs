@@ -75,6 +75,17 @@ export function buildEnhancement(baseHref) {
      block dumps inline as a raw white band at the bottom of the page. The
      footer + Telegram/WhatsApp buttons already cover these contacts. */
   [data-record-type="898"], .t898{display:none !important;}
+  /* Drop the leading shield icon from the hero eyebrow and the "О нас"
+     badge — it read as a stray figure on the left. On phones, centre the
+     eyebrow and keep it on a single line (was wrapping "· от 99₽"). */
+  .pp-eyebrow svg, .pp-badge svg{display:none !important;}
+  @media(max-width:520px){
+    .pp-eyebrow{
+      display:flex !important; width:100%;
+      justify-content:center; text-align:center;
+      white-space:nowrap; font-size:clamp(9.5px,2.9vw,12.5px) !important;
+    }
+  }
   /* The 2-column "Популярные сервисы" grid overflowed the viewport on
      phones (right cards clipped) because grid items default to
      min-width:auto and won't shrink below their content (e.g. "YouTube
