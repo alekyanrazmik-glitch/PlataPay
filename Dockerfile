@@ -7,8 +7,12 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 
-# Copy the rest of the source and build the static site into ./out
+# Copy the rest of the source and build the static site into ./out.
+# Timeweb serves the app at the domain root, so build with an empty base
+# path (base href "/") — the default ('/PlataPay') would 404 every asset
+# and break every nav link when served at root.
 COPY . .
+ENV NEXT_PUBLIC_BASE_PATH=""
 RUN node build.mjs
 
 # ---- Runtime stage: slim image with only production deps ----
