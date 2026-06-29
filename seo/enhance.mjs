@@ -457,5 +457,29 @@ export function buildEnhancement(baseHref) {
   setTimeout(init, 1500);
 })();
 </script>
+<script>
+(function(){
+  // The home "Отзывы клиентов" + mini-FAQ live inside a Tilda record
+  // (#rec2293276911) that we hide because its native Zero artboard
+  // duplicated the block and bled stray text. Hiding the whole record also
+  // hid the good .pp-rf block — so the reviews section never showed and the
+  // "Отзывы" nav link had nothing to scroll to. Lift .pp-rf out into normal
+  // flow just above the footer, where it renders and the anchor works.
+  function relocate(){
+    var rf = document.querySelector('.pp-rf');
+    if(!rf || rf.dataset.ppMoved) return;
+    var foot = document.querySelector('.pp-foot');
+    var host = (foot && (foot.closest('.r') || foot.closest('.t-rec'))) || foot;
+    if(!host || !host.parentNode) return;
+    rf.dataset.ppMoved = '1';
+    rf.id = rf.id || 'Otzivi';
+    host.parentNode.insertBefore(rf, host);
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', relocate);
+  else relocate();
+  setTimeout(relocate, 300);
+  setTimeout(relocate, 1000);
+})();
+</script>
 `;
 }
