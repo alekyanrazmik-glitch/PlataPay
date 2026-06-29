@@ -107,9 +107,9 @@ export function buildEnhancement(baseHref) {
   #rec2293276911 .tn-elem[data-elem-id="1779965803134"]{position:static !important;top:auto !important;left:0 !important;right:auto !important;width:100% !important;max-width:100% !important;height:auto !important;transform:none !important;display:block !important;margin:0 !important;}
   #rec2293276911 .tn-elem[data-elem-id="1779965803134"] .tn-atom{position:static !important;display:block !important;width:100% !important;max-width:100% !important;height:auto !important;left:0 !important;margin:0 !important;}
   #rec2293276911 .tn-elem[data-elem-id="1779965803134"] .pp-rf{width:100% !important;}
-  /* Align the reviews/FAQ block with the rest of the page: same centered
-     container width and side padding as the other sections (.pp-wrap). */
-  .pp-rf .pp-rf-inner{max-width:1100px !important;margin:0 auto !important;padding-left:24px !important;padding-right:24px !important;}
+  /* Stretch the reviews/FAQ block to the same width as the upper feature card
+     and the footer (≈1200px centered), so its edges line up with them. */
+  .pp-rf .pp-rf-inner{max-width:1200px !important;margin:0 auto !important;padding-left:24px !important;padding-right:24px !important;}
   /* Align the two columns: make them equal height (stretch) so their bottoms
      line up. The FAQ column (6 questions) is the taller one and sets the height,
      so it never gets an empty gap; the reviews list fills its column and scrolls
