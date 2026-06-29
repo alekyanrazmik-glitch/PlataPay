@@ -93,6 +93,19 @@ export function buildEnhancement(baseHref) {
   .pp-pop-grid{min-width:0;}
   .pp-pop-grid>.pp-pc,.pp-pc{min-width:0;}
   .pp-pc-name,.pp-pc-desc{overflow-wrap:anywhere;}
+  /* The home "Отзывы клиентов" + mini-FAQ (.pp-rf) live inside a Tilda Zero
+     artboard (#rec2293276911) whose fixed height clips overflow (so expanded
+     FAQ answers got cut off) and which still carries leftover native elements
+     that duplicate the block and bleed green text on mobile. Flatten the
+     artboard so .pp-rf flows in normal document flow, and hide every native
+     artboard element except the one that holds .pp-rf (data-elem-id 1779965803134). */
+  #rec2293276911 .t396__elem:not([data-elem-id="1779965803134"]){display:none !important;}
+  #rec2293276911 .t396__carrier,
+  #rec2293276911 .t396__filter{display:none !important;}
+  #rec2293276911 .t396,
+  #rec2293276911 .t396__artboard{position:static !important;height:auto !important;min-height:0 !important;max-height:none !important;overflow:visible !important;transform:none !important;}
+  #rec2293276911 .tn-elem[data-elem-id="1779965803134"]{position:static !important;top:auto !important;left:auto !important;right:auto !important;width:100% !important;max-width:100% !important;height:auto !important;transform:none !important;display:block !important;}
+  #rec2293276911 .tn-elem[data-elem-id="1779965803134"] .tn-atom{position:static !important;width:100% !important;height:auto !important;}
   /* Home FAQ as an inline accordion (replaces Tilda popups that jumped the
      page to the top when a question was closed). Scoped to .pp-rf so it does
      NOT collide with the /faq page, which reuses the .pp-faq-a class. */
