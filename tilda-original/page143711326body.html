@@ -545,13 +545,12 @@
     // 1) ВАШ логотип, загруженный в Tilda — высший приоритет (если поле logo заполнено)
     if(s.logo) out.push(s.logo);
     // 2) настоящий логотип бренда
-    if(d) out.push("https://logo.clearbit.com/"+d);
     // 3) монохромный значок Simple Icons
     if(s.slug) out.push("https://cdn.simpleicons.org/"+s.slug+"/white");
     // 4) favicon как последний запас
     if(d){
-      out.push("https://icons.duckduckgo.com/ip3/"+d+".ico");
       out.push("https://www.google.com/s2/favicons?domain="+d+"&sz=64");
+      out.push("https://icons.duckduckgo.com/ip3/"+d+".ico");
     }
     return out;
   }
@@ -570,8 +569,11 @@
     else if(s.bg===1){ style=' style="background:#fff"'; }
     return '<span class="pp-ico"'+style+'><img loading="lazy" alt="'+s.name+'" src="'+first+'" '
       +'data-fb="'+rest+'" data-letter="'+letter+'" '
-      +'onerror="ppFallback(this);"></span>';
+      +'onerror="ppFallback(this);" onload="ppImgChk(this);"></span>';
   }
+
+  // если картинка «загрузилась», но пустая/битая (naturalWidth=0) — уходим дальше
+  window.ppImgChk = window.ppImgChk || function(img){ if(img.naturalWidth===0){ ppFallback(img); } };
 
   // обработчик переключения на следующий источник (глобальный, т.к. вызывается из onerror)
   window.ppFallback = window.ppFallback || function(img){

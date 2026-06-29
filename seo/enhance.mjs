@@ -93,9 +93,6 @@ export function buildEnhancement(baseHref) {
   .pp-pop-grid{min-width:0;}
   .pp-pop-grid>.pp-pc,.pp-pc{min-width:0;}
   .pp-pc-name,.pp-pc-desc{overflow-wrap:anywhere;}
-  /* Hide the leftover original Tilda reviews/FAQ Zero block — it duplicated
-     the custom block and bled stray green text below the FAQ. */
-  #rec2293276911{display:none !important;}
   /* Home FAQ as an inline accordion (replaces Tilda popups that jumped the
      page to the top when a question was closed). Scoped to .pp-rf so it does
      NOT collide with the /faq page, which reuses the .pp-faq-a class. */
@@ -455,30 +452,6 @@ export function buildEnhancement(baseHref) {
   else init();
   setTimeout(init, 500);
   setTimeout(init, 1500);
-})();
-</script>
-<script>
-(function(){
-  // The home "Отзывы клиентов" + mini-FAQ live inside a Tilda record
-  // (#rec2293276911) that we hide because its native Zero artboard
-  // duplicated the block and bled stray text. Hiding the whole record also
-  // hid the good .pp-rf block — so the reviews section never showed and the
-  // "Отзывы" nav link had nothing to scroll to. Lift .pp-rf out into normal
-  // flow just above the footer, where it renders and the anchor works.
-  function relocate(){
-    var rf = document.querySelector('.pp-rf');
-    if(!rf || rf.dataset.ppMoved) return;
-    var foot = document.querySelector('.pp-foot');
-    var host = (foot && (foot.closest('.r') || foot.closest('.t-rec'))) || foot;
-    if(!host || !host.parentNode) return;
-    rf.dataset.ppMoved = '1';
-    rf.id = rf.id || 'Otzivi';
-    host.parentNode.insertBefore(rf, host);
-  }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', relocate);
-  else relocate();
-  setTimeout(relocate, 300);
-  setTimeout(relocate, 1000);
 })();
 </script>
 `;

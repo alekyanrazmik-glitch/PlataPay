@@ -548,14 +548,14 @@ document.addEventListener('DOMContentLoaded',t_setvisRecs);}})();</script></head
     const d=domains[s.name];
     // 1) ВАШ логотип, загруженный в Tilda — высший приоритет (если поле logo заполнено)
     if(s.logo) out.push(s.logo);
-    // 2) настоящий логотип бренда
-    if(d) out.push("https://logo.clearbit.com/"+d);
-    // 3) монохромный значок Simple Icons
+    // 2) монохромный значок Simple Icons (если у сервиса задан slug)
     if(s.slug) out.push("https://cdn.simpleicons.org/"+s.slug+"/white");
-    // 4) favicon как последний запас (DuckDuckGo). Google s2/favicons убран:
-    //    он отдаёт HTTP 200 с дженерик-иконкой «?» для неизвестных доменов,
-    //    из-за чего onerror не срабатывал и не доходил до буквенной заглушки.
+    // 3) favicon бренда по домену. Google s2 — самый надёжный источник реальных
+    //    логотипов для известных брендов; DuckDuckGo как запасной. Clearbit убран —
+    //    их Logo API отключён и всегда отдаёт битую картинку. Если ни один источник
+    //    не загрузился, onerror/onload доводят до буквенной заглушки.
     if(d){
+      out.push("https://www.google.com/s2/favicons?domain="+d+"&sz=64");
       out.push("https://icons.duckduckgo.com/ip3/"+d+".ico");
     }
     return out;
@@ -575,8 +575,11 @@ document.addEventListener('DOMContentLoaded',t_setvisRecs);}})();</script></head
     else if(s.bg===1){ style=' style="background:#fff"'; }
     return '<span class="pp-ico"'+style+'><img loading="lazy" alt="'+s.name+'" src="'+first+'" '
       +'data-fb="'+rest+'" data-letter="'+letter+'" '
-      +'onerror="ppFallback(this);"></span>';
+      +'onerror="ppFallback(this);" onload="ppImgChk(this);"></span>';
   }
+
+  // если картинка «загрузилась», но пустая/битая (naturalWidth=0) — уходим дальше
+  window.ppImgChk = window.ppImgChk || function(img){ if(img.naturalWidth===0){ ppFallback(img); } };
 
   // обработчик переключения на следующий источник (глобальный, т.к. вызывается из onerror)
   window.ppFallback = window.ppFallback || function(img){
