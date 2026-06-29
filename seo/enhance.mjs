@@ -106,6 +106,18 @@ export function buildEnhancement(baseHref) {
   #rec2293276911 .t396__artboard{position:static !important;height:auto !important;min-height:0 !important;max-height:none !important;overflow:visible !important;transform:none !important;}
   #rec2293276911 .tn-elem[data-elem-id="1779965803134"]{position:static !important;top:auto !important;left:auto !important;right:auto !important;width:100% !important;max-width:100% !important;height:auto !important;transform:none !important;display:block !important;}
   #rec2293276911 .tn-elem[data-elem-id="1779965803134"] .tn-atom{position:static !important;width:100% !important;height:auto !important;}
+  /* Keep the two columns proportional: make them equal height and let the
+     reviews list scroll inside its box instead of stretching the whole block
+     when there are many reviews. "Смотреть все отзывы" links to the full Avito
+     list. The FAQ column fills its box so both sides read as a balanced pair. */
+  .pp-rf .pp-rf-inner{align-items:stretch !important;}
+  .pp-rf .pp-rf-col{display:flex;flex-direction:column;}
+  .pp-rf .pp-rev-list{flex:1 1 auto;min-height:0;max-height:430px;overflow-y:auto;padding-right:8px;scrollbar-width:thin;scrollbar-color:#2e5bff transparent;}
+  .pp-rf .pp-rev-list::-webkit-scrollbar{width:6px;}
+  .pp-rf .pp-rev-list::-webkit-scrollbar-track{background:transparent;}
+  .pp-rf .pp-rev-list::-webkit-scrollbar-thumb{background:#1d3a6b;border-radius:6px;}
+  .pp-rf .pp-faq-list{flex:1 1 auto;display:flex;flex-direction:column;}
+  @media(max-width:860px){.pp-rf .pp-rev-list{max-height:480px;}.pp-rf .pp-rf-inner{align-items:start !important;}}
   /* Home FAQ as an inline accordion (replaces Tilda popups that jumped the
      page to the top when a question was closed). Scoped to .pp-rf so it does
      NOT collide with the /faq page, which reuses the .pp-faq-a class. */
