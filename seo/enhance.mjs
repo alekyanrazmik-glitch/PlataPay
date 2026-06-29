@@ -106,15 +106,17 @@ export function buildEnhancement(baseHref) {
   #rec2293276911 .t396__artboard{position:static !important;height:auto !important;min-height:0 !important;max-height:none !important;overflow:visible !important;transform:none !important;}
   #rec2293276911 .tn-elem[data-elem-id="1779965803134"]{position:static !important;top:auto !important;left:auto !important;right:auto !important;width:100% !important;max-width:100% !important;height:auto !important;transform:none !important;display:block !important;}
   #rec2293276911 .tn-elem[data-elem-id="1779965803134"] .tn-atom{position:static !important;width:100% !important;height:auto !important;}
-  /* Keep the block compact and balanced: cap the reviews list so it shows a few
-     cards then scrolls, instead of stretching the section when there are many
-     reviews. Columns keep their natural height (no forced equal-height, so the
-     FAQ box never gets a big empty gap). "Смотреть все отзывы" links to Avito. */
-  .pp-rf .pp-rev-list{max-height:360px;overflow-y:auto;padding-right:8px;scrollbar-width:thin;scrollbar-color:#2e5bff transparent;}
+  /* Align the two columns: make them equal height (stretch) so their bottoms
+     line up. The FAQ column (6 questions) is the taller one and sets the height,
+     so it never gets an empty gap; the reviews list fills its column and scrolls
+     softly when there are more reviews than fit. "Смотреть все отзывы" → Avito. */
+  .pp-rf .pp-rf-inner{align-items:stretch !important;}
+  .pp-rf .pp-rf-col{display:flex;flex-direction:column;}
+  .pp-rf .pp-rev-list{flex:1 1 auto;min-height:0;max-height:420px;overflow-y:auto;padding-right:8px;scrollbar-width:thin;scrollbar-color:#2e5bff transparent;}
   .pp-rf .pp-rev-list::-webkit-scrollbar{width:6px;}
   .pp-rf .pp-rev-list::-webkit-scrollbar-track{background:transparent;}
   .pp-rf .pp-rev-list::-webkit-scrollbar-thumb{background:#1d3a6b;border-radius:6px;}
-  @media(max-width:860px){.pp-rf .pp-rev-list{max-height:440px;}}
+  @media(max-width:860px){.pp-rf .pp-rf-inner{align-items:start !important;}.pp-rf .pp-rev-list{flex:none;max-height:480px;}}
   /* Home FAQ as an inline accordion (replaces Tilda popups that jumped the
      page to the top when a question was closed). Scoped to .pp-rf so it does
      NOT collide with the /faq page, which reuses the .pp-faq-a class. */
@@ -438,7 +440,10 @@ export function buildEnhancement(baseHref) {
   var ANSWERS = {
     'насколькоэтобезопасно':'Мы работаем только через официальные способы оплаты и не запрашиваем лишние данные. Все детали заказа согласовываются заранее, а подтверждение оплаты предоставляется после выполнения услуги.',
     'какиеспособыоплатыдоступны':'Мы принимаем оплату удобным для вас способом: через СБП, банковские карты российских и зарубежных банков, а также переводы на банковский счёт. После оформления заявки менеджер предложит доступные варианты и поможет выбрать наиболее удобный и выгодный способ оплаты.',
-    'какбыстропроисходитоплата':'Большинство заказов выполняется в течение 5–15 минут после подтверждения оплаты и получения необходимых данных. В отдельных случаях срок может зависеть от особенностей конкретного сервиса, проверки платежа или времени обработки со стороны поставщика, но мы всегда стараемся выполнить заказ максимально быстро и держим вас в курсе статуса.'
+    'какбыстропроисходитоплата':'Большинство заказов выполняется в течение 5–15 минут после подтверждения оплаты и получения необходимых данных. В отдельных случаях срок может зависеть от особенностей конкретного сервиса, проверки платежа или времени обработки со стороны поставщика, но мы всегда стараемся выполнить заказ максимально быстро и держим вас в курсе статуса.',
+    'какаякомиссия':'Комиссия — от 5% от суммы платежа. Точную сумму с учётом курса и комиссии мы сообщаем до оплаты: никаких скрытых платежей, вы заранее видите итоговую стоимость.',
+    'нужнолипередаватьлогинипароль':'Только если оплата требует входа в ваш аккаунт сервиса — и в большинстве случаев это не нужно. Мы запрашиваем минимум данных и работаем конфиденциально, ничего лишнего не храним.',
+    'чтоеслиоплатанепройдёт':'Если по какой-то причине оплату провести не удастся, мы вернём средства в полном объёме. Такие случаи редки, и мы всегда предупреждаем заранее, если есть сложности с конкретным сервисом.'
   };
   function key(s){ return (s||'').toLowerCase().replace(/[^а-яё]/gi,''); }
   function init(){
