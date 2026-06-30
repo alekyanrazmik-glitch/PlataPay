@@ -48,7 +48,10 @@ export function buildEnhancement(baseHref) {
     .pp-cats::-webkit-scrollbar{display:none;}
     .pp-cat{flex:0 0 auto;white-space:nowrap;min-height:40px;display:inline-flex;align-items:center;}
     .pp-sec-grid{grid-template-columns:1fr !important;}
-    .pp-card{width:100% !important;max-width:100% !important;}
+    /* Catalog cards have a fixed height:150px; on mobile the 44px tap-target
+       "Оплатить" button makes the content taller, so it spilled past the card
+       border. Let the card grow to fit its content here. */
+    .pp-card{width:100% !important;max-width:100% !important;height:auto !important;min-height:150px;}
     .pp-card a,.pp-pay a,.pp-cta a{min-height:44px;display:inline-flex;align-items:center;}
     /* "Оплатить" link on home service cards was only ~30px tall — bump it
        to a comfortable 44px tap target. */
