@@ -266,6 +266,13 @@ fs.copyFileSync(
 fs.copyFileSync(path.join(SRC, 'robots.txt'), path.join(OUT, 'robots.txt'));
 fs.copyFileSync(path.join(SRC, 'sitemap.xml'), path.join(OUT, 'sitemap.xml'));
 
+// Google Search Console ownership verification (HTML-file method) — must
+// be served byte-for-byte at the site root.
+fs.copyFileSync(
+  path.join(SRC, 'googleb9bbbe08651dac4d.html'),
+  path.join(OUT, 'googleb9bbbe08651dac4d.html'),
+);
+
 // Custom 404 that matches the site rather than Tilda's stock page
 fs.writeFileSync(
   path.join(OUT, '404.html'),
