@@ -38,6 +38,23 @@ export function renderPage({
     ],
   })}</script>`;
 
+  // Service schema so search engines understand this is a paid service
+  // (not just an article) — provider, area served, and an Offer when we
+  // have a real minimum price (variable-price services like Booking omit it
+  // rather than claim a fake "0 ₽").
+  const serviceLd = `<script type="application/ld+json">${JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'Service',
+    name: page.h1,
+    serviceType: `Оплата ${service.name} из России`,
+    provider: { '@type': 'Organization', name: 'PlataPay', url: 'https://payoplata.ru/' },
+    areaServed: 'RU',
+    url: canonical,
+    ...(service.price
+      ? { offers: { '@type': 'Offer', priceCurrency: 'RUB', price: String(service.price), url: canonical } }
+      : {}),
+  })}</script>`;
+
   return `<!doctype html>
 <html lang="ru">
 <head>
@@ -54,8 +71,12 @@ export function renderPage({
 <meta property="og:title" content="${escapeAttr(page.title)}">
 <meta property="og:description" content="${escapeAttr(page.description)}">
 <meta property="og:url" content="${canonical}">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="${escapeAttr(page.title)}">
+<meta name="twitter:description" content="${escapeAttr(page.description)}">
 ${verifyTags}
 ${breadcrumbLd}
+${serviceLd}
 <style>
   :root { color-scheme: dark; }
   *,*::before,*::after{box-sizing:border-box;}

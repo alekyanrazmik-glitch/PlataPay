@@ -404,6 +404,10 @@ export function buildPricingUiPatch() {
     openCheckout(currentService,tier);
   });
   document.addEventListener('click',function(e){
+    // Let the service name/logo link (.pp-pc-head, .pp-name-link) navigate to
+    // its SEO landing page instead of being swallowed into the tariff modal —
+    // only the rest of the card (price, "Оплатить") opens tariffs.
+    if(e.target.closest && e.target.closest('.pp-pc-head,.pp-name-link')) return;
     var card=e.target.closest && e.target.closest('.pp-card,.pp-pc');
     if(!card || card.classList.contains('pp-cta')) return;
     var s = SERVICES.find(function(x){return x.slug===card.dataset.ppPricing;}) || findService(serviceNameFromCard(card));
