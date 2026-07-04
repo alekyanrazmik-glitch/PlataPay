@@ -75,6 +75,11 @@ function displayForName(name) {
 }
 
 function patchCatalogServiceArray(html) {
+  // Catalog-only: the trailing cleanup regexes below strip ANY
+  // '<span>от</span>' in the string, not just inside catalog cards. Running
+  // this on other pages (home included) would delete the "от" label from
+  // .pp-pc-price before patchHomePopularCards gets a chance to match it.
+  if (!html.includes('const CATS = [')) return html;
   let out = html.replace(/(\{[^{}\n]*name:")([^"]+)("[^{}\n]*price:")([^"]*)(")/g, (full, before, name, middle, oldPrice, after) => {
     const nextDisplay = displayForName(name);
     return nextDisplay ? `${before}${name}${middle}${nextDisplay}${after}` : full;
