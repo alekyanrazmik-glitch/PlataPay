@@ -113,6 +113,48 @@ function buildCatalogInjection() {
 
 const CATALOG_INJECTION = buildCatalogInjection();
 
+// Name → SEO-slug map so catalog cards can link straight to their
+// keyword-rich landing page (/oplata-<slug>/) instead of only opening the
+// order popup. Every service in CAT_SERVICES gets an "oplata-<slug>" page
+// (see seo/data.mjs intentsForService), so an exact name match is always
+// safe to link. A handful of catalog card names don't match the SEO
+// service name verbatim (e.g. "Adobe" card vs "Adobe Creative Cloud"
+// service) — aliased by hand below rather than guessed at runtime.
+const SEO_NAME_ALIASES = {
+  Adobe: 'adobe-cc',
+  Photoshop: 'adobe-photoshop',
+  Spotify: 'spotify',
+  Nintendo: 'nintendo',
+  Canva: 'canva',
+  CapCut: 'capcut',
+  Ableton: 'ableton',
+  Discord: 'discord',
+  'Proton Mail': 'proton-mail',
+  Wix: 'wix',
+  Zoom: 'zoom',
+  Coursera: 'coursera',
+  Duolingo: 'duolingo',
+};
+const SEO_NAME_TO_SLUG = Object.fromEntries(CAT_SERVICES.map((s) => [s.name, s.slug]));
+for (const [name, slug] of Object.entries(SEO_NAME_ALIASES)) SEO_NAME_TO_SLUG[name] = slug;
+
+// Wire the catalog's card name to /oplata-<slug>/ when we have one, so
+// browsing the catalog (not just searching) feeds the SEO landing pages —
+// previously every card, home or catalog, only ever opened the order
+// popup and the SEO pages had no in-site path leading to them.
+function patchCatalogSeoLinks(html) {
+  if (!html.includes('const CATS = [')) return html;
+  html = html.replace(
+    '  function cardHTML(s){',
+    `  const SEO_SLUGS = ${JSON.stringify(SEO_NAME_TO_SLUG)};\n  const SEO_BASE = ${JSON.stringify(BASE_HREF)};\n  function cardHTML(s){`,
+  );
+  html = html.replace(
+    `+'<div class="pp-head">'+iconHTML(s)+'<span class="pp-name">'+s.name+'</span></div>'`,
+    `+'<div class="pp-head">'+iconHTML(s)+(SEO_SLUGS[s.name]?('<a class="pp-name pp-name-link" href="'+SEO_BASE+'oplata-'+SEO_SLUGS[s.name]+'/">'+s.name+'</a>'):('<span class="pp-name">'+s.name+'</span>'))+'</div>'`,
+  );
+  return html;
+}
+
 function patchCatalogVerticals(html) {
   // Only touch the catalog page (it has the CATS array + domains map).
   if (!html.includes('const CATS = [') || html.includes('label:"Gift Cards"')) {
@@ -154,6 +196,9 @@ function patchCatalogSkin(html) {
   .pp-pay a:hover,.pp-pay a:hover span{color:#fff !important;}
   .pp-pay a:hover{background:var(--accent) !important;border-color:var(--accent) !important;}
   .pp-sec-title{letter-spacing:-.02em;}
+  /* card name links to the service's SEO landing page */
+  a.pp-name-link{color:inherit; text-decoration:none;}
+  a.pp-name-link:hover{color:var(--accent) !important; text-decoration:underline;}
 </style>`;
   return html.replace('</body>', () => `${skin}</body>`);
 }
@@ -388,6 +433,9 @@ function patchPage(html, isHome) {
   // 3.5) Add the new verticals (tickets, shops, gift cards, assets) to the
   //      catalog's services / categories / favicon domains.
   html = patchCatalogVerticals(html);
+
+  // 3.55) Link catalog card names to their SEO landing pages.
+  html = patchCatalogSeoLinks(html);
 
   // 3.6) Cosmetic catalog skin aligned with the new home page.
   html = patchCatalogSkin(html);

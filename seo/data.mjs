@@ -166,6 +166,7 @@ export const SERVICES = [
   { slug: 'bandcamp', name: 'Bandcamp', cat: 'Музыка', logo: 'Bandcamp.PNG', price: 600, tiers: ['разовая покупка'], hint: 'площадка прямых покупок музыки у исполнителей' },
   { slug: 'suno', name: 'Suno', cat: 'Музыка', logo: 'Suno%20AI.PNG', price: 1000, tiers: ['Pro ($10)', 'Premier ($30)'], hint: 'AI-генератор музыки с вокалом по текстовому запросу' },
   { slug: 'spotify', name: 'Spotify Premium', cat: 'Музыка', logo: 'Spotify.PNG', price: 600, tiers: ['Individual', 'Duo', 'Family'], hint: 'крупнейший музыкальный стриминг с офлайн-режимом и подкастами' },
+  { slug: 'netflix', name: 'Netflix', cat: 'Музыка', domain: 'netflix.com', price: 700, tiers: ['Standard', 'Premium'], hint: 'крупнейший стриминговый сервис фильмов, сериалов и шоу с офлайн-скачиванием и профилями для всей семьи' },
   { slug: 'youtube-premium', name: 'YouTube Premium', cat: 'Музыка', logo: 'YouTube%20.PNG', price: 800, tiers: ['Individual', 'Family'], hint: 'YouTube без рекламы, в фоне и со скачиванием, плюс YouTube Music' },
   { slug: 'twitch', name: 'Twitch', cat: 'Музыка', logo: 'Twitch.PNG', price: 600, tiers: ['Tier 1', 'Tier 2', 'Tier 3', 'Turbo'], hint: 'подписки на стримеров и Turbo для отключения рекламы' },
   { slug: 'tiktok', name: 'TikTok', cat: 'Музыка', logo: 'Tiktoc.WEBP', price: 600, tiers: ['монеты', 'подписка'], hint: 'пополнение монет для подарков стримерам и подписка на платный контент' },
