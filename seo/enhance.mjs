@@ -431,6 +431,10 @@ export function buildEnhancement(baseHref) {
         continue;
       }
       if(raw.charAt(0) === '#'){ a.classList.remove('active'); continue; }
+      // External links (e.g. "Авиабилеты" → travel.payoplata.ru) have an
+      // empty a.pathname of "/", which falsely matched the home page — skip
+      // any nav link that doesn't point at this same host.
+      if(a.hostname && a.hostname !== location.hostname){ a.classList.remove('active'); continue; }
       if(cleanPath(a.pathname) === here) a.classList.add('active');
       else a.classList.remove('active');
     }
