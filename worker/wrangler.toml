@@ -1,0 +1,17 @@
+name = "platapay-payments"
+main = "src/index.mjs"
+compatibility_date = "2026-01-01"
+# Needed for node:crypto (MD5 — Enot's signing scheme requires it, and the
+# Web Crypto API deliberately doesn't offer MD5).
+compatibility_flags = ["nodejs_compat"]
+
+# Create with: wrangler kv namespace create ORDERS
+# Then paste the returned id below.
+kv_namespaces = [
+  { binding = "ORDERS", id = "REPLACE_WITH_KV_NAMESPACE_ID" }
+]
+
+# Non-secret config. Secrets (ENOT_*, TELEGRAM_*) are set separately with
+# `wrangler secret put <NAME>` — see README.md — and must never go here.
+[vars]
+SITE_URL = "https://payoplata.ru"

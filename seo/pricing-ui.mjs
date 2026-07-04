@@ -215,6 +215,9 @@ export function buildPricingUiPatch() {
   var BOT = '8842294846:AAEYOKRa-M80_fnZGu1Qk_fbmB7fknIR8UE';
   var CHAT = '523060537';
   var SHEETS = 'https://script.google.com/macros/s/AKfycbyy43Ff5kKivrUsaXWEkda7JXNwHrOI-3BJIJp3UG9H8K6cb4DxjpC8eXNPGNEXQEWt/exec';
+  // TODO: replace with the deployed Worker URL (see worker/README.md),
+  // ideally a custom domain like https://api.payoplata.ru once set up.
+  var PAYMENTS_API = 'https://platapay-payments.YOUR-SUBDOMAIN.workers.dev';
   var mask = document.getElementById('ppTariffMask');
   var modal = document.getElementById('ppTariffModal');
   var body = document.getElementById('ppTariffBody');
@@ -337,9 +340,15 @@ export function buildPricingUiPatch() {
     if(mask.classList.contains('open')) closeModal(true);
   });
   function checkoutHtml(s,tier){
-    var priceText = tier && tier.rub ? money(tier.rub) : 'по запросу';
+    var isFixed = !!(tier && tier.rub);
+    var priceText = isFixed ? money(tier.rub) : 'по запросу';
     var tierName = tier ? tier.label : 'Другой тариф / сумма';
-    return tariffHeaderHtml(s)+'<h3 class="pp-tariff-title" style="font-size:21px;margin-top:8px;">Оформить оплату</h3><p class="pp-tariff-sub">Сервис, тариф и сумма уже заполнены. Остаётся выбрать способ связи — укажите контакт <b>или</b> почту, чего-то одного достаточно.</p><div class="pp-checkout-box"><div class="pp-checkout-summary"><strong>'+escapeHtml(s.name)+' — '+escapeHtml(tierName)+'</strong><span>Цена: '+escapeHtml(priceText)+'</span></div><form id="ppCheckoutForm"><div class="pp-checkout-row"><div class="pp-checkout-field"><label>Сервис</label><input readonly value="'+escapeHtml(s.name)+'"></div><div class="pp-checkout-field"><label>Тариф</label><input readonly value="'+escapeHtml(tierName)+'"></div></div><div class="pp-checkout-field"><label>Сумма</label><input readonly value="'+escapeHtml(priceText)+'"></div><div class="pp-checkout-contact-hint">Заполните <b>любой</b> из вариантов связи ниже — контакт в мессенджере или почту.</div><div class="pp-checkout-contact-row"><div class="pp-checkout-field"><label>Способ связи</label><select id="ppCheckoutChannel"><option value="Telegram">Telegram</option><option value="WhatsApp">WhatsApp</option><option value="Skype">Skype</option><option value="Телефон">Телефон</option></select></div><div class="pp-checkout-field"><label>Контакт</label><input id="ppCheckoutContact" type="text" placeholder="@username, Skype или номер" autocomplete="off"></div></div><div class="pp-checkout-or"><span>или</span></div><div class="pp-checkout-field"><label>Email</label><input id="ppCheckoutEmail" type="email" placeholder="name@example.com" autocomplete="email"></div><button class="pp-checkout-submit" type="submit">Продолжить к оплате</button><div class="pp-checkout-error" id="ppCheckoutError"></div></form><button class="pp-checkout-back" id="ppCheckoutBack">← Назад к тарифам</button></div>';
+    var introText = isFixed
+      ? 'Сервис, тариф и сумма уже заполнены. Укажите имя и контакт — после «Перейти к оплате» откроется страница Enot.'
+      : 'Менеджер рассчитает точную стоимость и пришлёт ссылку на оплату. Укажите имя и контакт — остальное уже заполнено.';
+    var submitLabel = isFixed ? 'Перейти к оплате' : 'Отправить заявку';
+    var priceHint = isFixed ? '' : ' · менеджер рассчитает стоимость и пришлёт ссылку на оплату';
+    return tariffHeaderHtml(s)+'<h3 class="pp-tariff-title" style="font-size:21px;margin-top:8px;">Оформить оплату</h3><p class="pp-tariff-sub">'+introText+'</p><div class="pp-checkout-box"><div class="pp-checkout-summary"><strong>'+escapeHtml(s.name)+' — '+escapeHtml(tierName)+'</strong><span>Цена: '+escapeHtml(priceText)+escapeHtml(priceHint)+'</span></div><form id="ppCheckoutForm" data-fixed="'+(isFixed?'1':'0')+'" data-amount="'+(isFixed?tier.rub:'')+'"><div class="pp-checkout-row"><div class="pp-checkout-field"><label>Сервис</label><input readonly value="'+escapeHtml(s.name)+'"></div><div class="pp-checkout-field"><label>Тариф</label><input readonly value="'+escapeHtml(tierName)+'"></div></div><div class="pp-checkout-field"><label>Сумма</label><input readonly value="'+escapeHtml(priceText)+'"></div><div class="pp-checkout-field"><label>Ваше имя</label><input id="ppCheckoutName" type="text" placeholder="Как к вам обращаться" autocomplete="name"></div><div class="pp-checkout-contact-hint">Заполните <b>любой</b> из вариантов связи ниже — контакт в мессенджере или почту.</div><div class="pp-checkout-contact-row"><div class="pp-checkout-field"><label>Способ связи</label><select id="ppCheckoutChannel"><option value="Telegram">Telegram</option><option value="WhatsApp">WhatsApp</option><option value="Skype">Skype</option><option value="Телефон">Телефон</option></select></div><div class="pp-checkout-field"><label>Контакт</label><input id="ppCheckoutContact" type="text" placeholder="@username, Skype или номер" autocomplete="off"></div></div><div class="pp-checkout-or"><span>или</span></div><div class="pp-checkout-field"><label>Email</label><input id="ppCheckoutEmail" type="email" placeholder="name@example.com" autocomplete="email"></div><div class="pp-checkout-field"><label>Комментарий (необязательно)</label><input id="ppCheckoutComment" type="text" placeholder="Если есть, что уточнить" autocomplete="off"></div><button class="pp-checkout-submit" type="submit">'+submitLabel+'</button><div class="pp-checkout-error" id="ppCheckoutError"></div></form><button class="pp-checkout-back" id="ppCheckoutBack">← Назад к тарифам</button></div>';
   }
   function openCheckout(s,tier){
     setAccent(s);
@@ -350,11 +359,15 @@ export function buildPricingUiPatch() {
     back.addEventListener('click',function(){openTariffs(s);});
     form.addEventListener('submit',function(e){
       e.preventDefault();
+      err.style.display='none';
+      var name=document.getElementById('ppCheckoutName').value.trim();
       var email=document.getElementById('ppCheckoutEmail').value.trim();
       var channel=document.getElementById('ppCheckoutChannel').value.trim();
       var contact=document.getElementById('ppCheckoutContact').value.trim();
+      var comment=document.getElementById('ppCheckoutComment').value.trim();
       var emailOk = email && email.indexOf('@')>0 && email.indexOf('.')>email.indexOf('@');
       var contactOk = contact.length>=3;
+      if(!name){ err.textContent='Укажите ваше имя'; err.style.display='block'; return; }
       if(!emailOk && !contactOk){ err.textContent='Укажите контакт в мессенджере или почту — что-то одно'; err.style.display='block'; return; }
       if(email && !emailOk){ err.textContent='Почта введена с ошибкой — проверьте адрес'; err.style.display='block'; return; }
       var priceText = tier && tier.rub ? money(tier.rub) : 'по запросу';
@@ -364,32 +377,71 @@ export function buildPricingUiPatch() {
       if(emailOk) contactParts.push('Email: '+email);
       var contactLine = contactParts.join('; ');
       var submitBtn = form.querySelector('.pp-checkout-submit');
-      if(submitBtn){ submitBtn.disabled=true; submitBtn.textContent='Отправляем…'; }
-      var msg=[
-        'Заявка с сайта PlataPay (карточка тарифа)',
-        'Сервис: '+s.name,
-        'Тариф: '+tierName,
-        'Цена: '+priceText,
-        'Контакт: '+contactLine,
-        'Страница: https://payoplata.ru'+location.pathname
-      ].join('\\n');
-      var tg=fetch('https://api.telegram.org/bot'+BOT+'/sendMessage',{
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({chat_id:CHAT, text:msg, parse_mode:'HTML', disable_web_page_preview:true})
-      }).then(function(r){return r.ok;}).catch(function(){return false;});
-      var sh=fetch(SHEETS,{
-        method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain;charset=utf-8'},
-        body: JSON.stringify({source:'tariff', service:s.name, tier:tierName, price:priceText, contact:contactLine, page:location.pathname, ts:Date.now()})
-      }).then(function(){return true;}).catch(function(){return false;});
-      Promise.all([tg,sh]).then(function(r){
-        if(r[0]||r[1]){
-          body.innerHTML='<div class="pp-checkout-ok"><strong>Заявка принята</strong><br>Мы получили сервис, тариф, цену и ваш контакт. Свяжемся в течение 5–15 минут и пришлём ссылку на оплату. Если срочно — <a href="https://t.me/Kimzar_A" target="_blank" style="color:#7BAEFF;">@Kimzar_A</a>.</div>';
-          if(window.ym) window.ym(109522965,'reachGoal','tariff_order');
-        } else {
-          err.textContent='Не удалось отправить. Напишите в Telegram: @Kimzar_A'; err.style.display='block';
-          if(submitBtn){ submitBtn.disabled=false; submitBtn.textContent='Продолжить к оплате'; }
-        }
-      });
+      var isFixed = form.getAttribute('data-fixed')==='1';
+
+      // Shared fallback: the existing lead flow (Telegram + Sheets, a human
+      // quotes/sends the payment link manually). Used directly for
+      // variable ("по запросу") prices, and as a safety net for fixed
+      // prices if the payment backend isn't reachable — e.g. before the
+      // Cloudflare Worker is deployed, or a transient network error —
+      // so a broken/unset PAYMENTS_API degrades to "we'll follow up"
+      // instead of a dead-end error.
+      function sendLeadFallback(afterFixedFailure){
+        if(submitBtn){ submitBtn.disabled=true; submitBtn.textContent='Отправляем…'; }
+        var msg=[
+          'Заявка с сайта PlataPay (карточка тарифа)'+(afterFixedFailure?' — оплата недоступна, нужно выставить счёт вручную':''),
+          'Сервис: '+s.name,
+          'Тариф: '+tierName,
+          'Цена: '+priceText,
+          'Имя: '+name,
+          'Контакт: '+contactLine,
+          comment ? 'Комментарий: '+comment : null,
+          'Страница: https://payoplata.ru'+location.pathname
+        ].filter(Boolean).join('\\n');
+        var tg=fetch('https://api.telegram.org/bot'+BOT+'/sendMessage',{
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({chat_id:CHAT, text:msg, parse_mode:'HTML', disable_web_page_preview:true})
+        }).then(function(r){return r.ok;}).catch(function(){return false;});
+        var sh=fetch(SHEETS,{
+          method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain;charset=utf-8'},
+          body: JSON.stringify({source:'tariff', service:s.name, tier:tierName, price:priceText, name:name, contact:contactLine, comment:comment, page:location.pathname, ts:Date.now()})
+        }).then(function(){return true;}).catch(function(){return false;});
+        Promise.all([tg,sh]).then(function(r){
+          if(r[0]||r[1]){
+            body.innerHTML='<div class="pp-checkout-ok"><strong>Заявка принята</strong><br>Менеджер рассчитает стоимость и пришлёт ссылку на оплату в течение 5–15 минут. Если срочно — <a href="https://t.me/Kimzar_A" target="_blank" style="color:#7BAEFF;">@Kimzar_A</a>.</div>';
+            if(window.ym) window.ym(109522965,'reachGoal','tariff_order');
+          } else {
+            err.textContent='Не удалось отправить. Напишите в Telegram: @Kimzar_A'; err.style.display='block';
+            if(submitBtn){ submitBtn.disabled=false; submitBtn.textContent=isFixed?'Перейти к оплате':'Отправить заявку'; }
+          }
+        });
+      }
+
+      if(isFixed){
+        // Real payment: create the order server-side (Worker signs the
+        // Enot link with a secret key that never touches the browser) and
+        // redirect straight to Enot's hosted checkout. Telegram
+        // notification fires later, from the webhook, only once Enot
+        // confirms the payment actually went through.
+        if(submitBtn){ submitBtn.disabled=true; submitBtn.textContent='Создаём платёж…'; }
+        fetch(PAYMENTS_API+'/api/create-payment',{
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ service:s.name, tariff:tierName, amount:Number(form.getAttribute('data-amount')), name:name, contact:contactLine, comment:comment })
+        }).then(function(r){ return r.json().catch(function(){return null;}).then(function(data){ return {ok:r.ok, data:data}; }); })
+        .then(function(res){
+          if(res.ok && res.data && res.data.payment_url){
+            window.location.href = res.data.payment_url;
+          } else {
+            sendLeadFallback(true);
+          }
+        }).catch(function(){
+          sendLeadFallback(true);
+        });
+        return;
+      }
+
+      // Variable ("по запросу") price — unchanged lead flow.
+      sendLeadFallback(false);
     });
   }
   close.addEventListener('click',closeModal);
