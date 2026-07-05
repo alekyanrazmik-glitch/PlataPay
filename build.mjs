@@ -312,6 +312,73 @@ ${verifyTags()}
 `,
 );
 
+// Enot payment result pages, same visual language as 404.html above.
+function paymentResultPage({ tag, tagColor, title, body, primary, ghost }) {
+  return `<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${title} — PlataPay</title>
+<meta name="robots" content="noindex,nofollow">
+${verifyTags()}
+<link rel="icon" href="${BASE_HREF}favicon.svg" type="image/svg+xml">
+<style>
+  :root { color-scheme: dark; }
+  html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',system-ui,sans-serif;background:#08172F;color:#eef3ff;}
+  .wrap{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;}
+  .icon{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;margin-bottom:18px;}
+  .tag{font-size:12px;letter-spacing:.12em;color:${tagColor};text-transform:uppercase;font-weight:600;}
+  h1{font-size:32px;margin:16px 0 8px;font-weight:700;letter-spacing:-.02em;max-width:520px;}
+  p{color:#9fb2d4;max-width:480px;margin:0 0 24px;line-height:1.55;font-size:16px;}
+  .btns{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;}
+  a{display:inline-flex;align-items:center;padding:12px 20px;border-radius:999px;font-size:15px;font-weight:600;text-decoration:none;}
+  .primary{background:linear-gradient(180deg,#2e7bff,#1e5fd6);color:#fff;}
+  .ghost{background:#0c1f40;color:#eef3ff;border:1px solid #1d3a6b;}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="tag">${tag}</div>
+    <h1>${title}</h1>
+    <p>${body}</p>
+    <div class="btns">
+      <a class="primary" href="${primary.href}"${primary.target ? ` target="${primary.target}" rel="noopener"` : ''}>${primary.label}</a>
+      <a class="ghost" href="${ghost.href}"${ghost.target ? ` target="${ghost.target}" rel="noopener"` : ''}>${ghost.label}</a>
+    </div>
+  </div>
+</body>
+</html>
+`;
+}
+
+fs.mkdirSync(path.join(OUT, 'payment', 'success'), { recursive: true });
+fs.writeFileSync(
+  path.join(OUT, 'payment', 'success', 'index.html'),
+  paymentResultPage({
+    tag: 'Оплата прошла',
+    tagColor: '#22C55E',
+    title: 'Оплата успешно получена',
+    body: 'Мы уже начали обработку вашей заявки. Мы получаем подтверждение об оплате автоматически, но если хотите подтвердить детали — напишите в Telegram.',
+    primary: { href: 'https://t.me/Kimzar_A', label: 'Написать в Telegram', target: '_blank' },
+    ghost: { href: BASE_HREF, label: 'Вернуться на главную' },
+  }),
+);
+
+fs.mkdirSync(path.join(OUT, 'payment', 'fail'), { recursive: true });
+fs.writeFileSync(
+  path.join(OUT, 'payment', 'fail', 'index.html'),
+  paymentResultPage({
+    tag: 'Оплата не прошла',
+    tagColor: '#FF8D8D',
+    title: 'Оплата не прошла или была отменена',
+    body: 'Деньги не были списаны. Можно попробовать оплатить ещё раз или написать в поддержку, если что-то пошло не так.',
+    primary: { href: `${BASE_HREF}catalog/`, label: 'Попробовать снова' },
+    ghost: { href: 'https://t.me/Kimzar_A', label: 'Написать в поддержку', target: '_blank' },
+  }),
+);
+console.log('payment result pages: /payment/success/, /payment/fail/');
+
 // .nojekyll so GitHub Pages serves _next-style files too
 fs.writeFileSync(path.join(OUT, '.nojekyll'), '');
 
