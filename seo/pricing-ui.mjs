@@ -198,6 +198,11 @@ export function buildPricingUiPatch() {
   .pp-checkout-back{width:100%;border:1px solid #1d3a6b;border-radius:13px;background:transparent;color:#cfd9ef;font-weight:750;font-size:14px;padding:12px;cursor:pointer;margin-top:10px;}
   .pp-checkout-error{color:#ff9b9b;font-size:13px;margin:8px 0 0;display:none;}
   .pp-checkout-ok{border:1px solid rgba(34,197,94,.45);background:rgba(34,197,94,.12);border-radius:14px;padding:16px;color:#d9ffe5;margin-top:16px;}
+  .pp-checkout-check{display:flex;align-items:flex-start;gap:9px;margin:14px 0 4px;font-size:12.5px;line-height:1.45;color:#9fb2d4;cursor:pointer;}
+  .pp-checkout-check input{width:18px;height:18px;min-width:18px;margin:1px 0 0;accent-color:var(--svc-accent,#2e7bff);cursor:pointer;}
+  .pp-checkout-check a{color:#7BAEFF;text-decoration:none;}
+  .pp-checkout-check a:hover{text-decoration:underline;}
+  .pp-checkout-hp{position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none;}
   @media(max-width:560px){.pp-tariff-modal{padding:20px 16px;border-radius:18px}.pp-tariff-hero{align-items:flex-start}.pp-tariff-logo{width:50px;height:50px}.pp-tariff-grid{grid-template-columns:1fr}.pp-checkout-row,.pp-checkout-contact-row{grid-template-columns:1fr}.pp-tariff-title{font-size:22px}}
 </style>
 <div class="pp-tariff-mask" id="ppTariffMask" aria-hidden="true">
@@ -224,6 +229,23 @@ export function buildPricingUiPatch() {
   function norm(s){ return String(s||'').toLowerCase().replace(/premium|pro|plus|creative cloud|cc|тариф|подписка/g,'').replace(/[^a-zа-я0-9]+/gi,''); }
   function money(rub){ return rub ? new Intl.NumberFormat('ru-RU').format(rub) + ' ₽' : 'по запросу'; }
   function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+
+  // --- Anti-duplicate (shared namespace with the mini-form): the same
+  // request isn't sent twice; plus a short global cooldown against spam.
+  var DEDUP_MS = 30*60*1000, COOLDOWN_MS = 15*1000;
+  function reqKey(a,b){ return (String(a)+'|'+String(b)).toLowerCase().replace(/\\s+/g,''); }
+  function lstore(){ try{ return window.localStorage; }catch(e){ return null; } }
+  function recentlySent(key){
+    var s=lstore(); if(!s) return false;
+    try{
+      if(Date.now()-(+s.getItem('ppReqLast')||0) < COOLDOWN_MS) return 'cooldown';
+      if(Date.now()-(+s.getItem('ppReq_'+key)||0) < DEDUP_MS) return 'dup';
+    }catch(e){}
+    return false;
+  }
+  function markSent(key){ var s=lstore(); if(!s) return; try{ s.setItem('ppReq_'+key,''+Date.now()); s.setItem('ppReqLast',''+Date.now()); }catch(e){} }
+  function policyHref(){ return (location.pathname==='/'||location.pathname==='') ? '#popuppolicy' : '/#popuppolicy'; }
+  function ofertaHref(){ return (location.pathname==='/'||location.pathname==='') ? '#popupoferta' : '/#popupoferta'; }
   function logoSrc(s){ return s && s.logo ? LOGO_BASE + s.logo : ''; }
   window.ppLogoFB=function(img){
     var p=img.parentNode; if(!p) return;
@@ -339,7 +361,7 @@ export function buildPricingUiPatch() {
   function checkoutHtml(s,tier){
     var priceText = tier && tier.rub ? money(tier.rub) : 'по запросу';
     var tierName = tier ? tier.label : 'Другой тариф / сумма';
-    return tariffHeaderHtml(s)+'<h3 class="pp-tariff-title" style="font-size:21px;margin-top:8px;">Оформить оплату</h3><p class="pp-tariff-sub">Сервис, тариф и сумма уже заполнены. Остаётся выбрать способ связи — укажите контакт <b>или</b> почту, чего-то одного достаточно.</p><div class="pp-checkout-box"><div class="pp-checkout-summary"><strong>'+escapeHtml(s.name)+' — '+escapeHtml(tierName)+'</strong><span>Цена: '+escapeHtml(priceText)+'</span></div><form id="ppCheckoutForm"><div class="pp-checkout-row"><div class="pp-checkout-field"><label>Сервис</label><input readonly value="'+escapeHtml(s.name)+'"></div><div class="pp-checkout-field"><label>Тариф</label><input readonly value="'+escapeHtml(tierName)+'"></div></div><div class="pp-checkout-field"><label>Сумма</label><input readonly value="'+escapeHtml(priceText)+'"></div><div class="pp-checkout-contact-hint">Заполните <b>любой</b> из вариантов связи ниже — контакт в мессенджере или почту.</div><div class="pp-checkout-contact-row"><div class="pp-checkout-field"><label>Способ связи</label><select id="ppCheckoutChannel"><option value="Telegram">Telegram</option><option value="WhatsApp">WhatsApp</option><option value="Skype">Skype</option><option value="Телефон">Телефон</option></select></div><div class="pp-checkout-field"><label>Контакт</label><input id="ppCheckoutContact" type="text" placeholder="@username, Skype или номер" autocomplete="off"></div></div><div class="pp-checkout-or"><span>или</span></div><div class="pp-checkout-field"><label>Email</label><input id="ppCheckoutEmail" type="email" placeholder="name@example.com" autocomplete="email"></div><button class="pp-checkout-submit" type="submit">Продолжить к оплате</button><div class="pp-checkout-error" id="ppCheckoutError"></div></form><button class="pp-checkout-back" id="ppCheckoutBack">← Назад к тарифам</button></div>';
+    return tariffHeaderHtml(s)+'<h3 class="pp-tariff-title" style="font-size:21px;margin-top:8px;">Оформить оплату</h3><p class="pp-tariff-sub">Сервис, тариф и сумма уже заполнены. Остаётся выбрать способ связи — укажите контакт <b>или</b> почту, чего-то одного достаточно.</p><div class="pp-checkout-box"><div class="pp-checkout-summary"><strong>'+escapeHtml(s.name)+' — '+escapeHtml(tierName)+'</strong><span>Цена: '+escapeHtml(priceText)+'</span></div><form id="ppCheckoutForm"><div class="pp-checkout-row"><div class="pp-checkout-field"><label>Сервис</label><input readonly value="'+escapeHtml(s.name)+'"></div><div class="pp-checkout-field"><label>Тариф</label><input readonly value="'+escapeHtml(tierName)+'"></div></div><div class="pp-checkout-field"><label>Сумма</label><input readonly value="'+escapeHtml(priceText)+'"></div><div class="pp-checkout-contact-hint">Заполните <b>любой</b> из вариантов связи ниже — контакт в мессенджере или почту.</div><div class="pp-checkout-contact-row"><div class="pp-checkout-field"><label>Способ связи</label><select id="ppCheckoutChannel"><option value="Telegram">Telegram</option><option value="WhatsApp">WhatsApp</option><option value="Skype">Skype</option><option value="Телефон">Телефон</option></select></div><div class="pp-checkout-field"><label>Контакт</label><input id="ppCheckoutContact" type="text" placeholder="@username, Skype или номер" autocomplete="off"></div></div><div class="pp-checkout-or"><span>или</span></div><div class="pp-checkout-field"><label>Email</label><input id="ppCheckoutEmail" type="email" placeholder="name@example.com" autocomplete="email"></div><div class="pp-checkout-hp"><label>Компания<input type="text" id="ppCheckoutHp" tabindex="-1" autocomplete="off"></label></div><label class="pp-checkout-check"><input type="checkbox" id="ppCheckoutAgree"><span>Я согласен на <a href="'+policyHref()+'" target="_blank" rel="noopener">обработку персональных данных</a> и принимаю <a href="'+ofertaHref()+'" target="_blank" rel="noopener">оферту</a></span></label><button class="pp-checkout-submit" type="submit">Продолжить к оплате</button><div class="pp-checkout-error" id="ppCheckoutError"></div></form><button class="pp-checkout-back" id="ppCheckoutBack">← Назад к тарифам</button></div>';
   }
   function openCheckout(s,tier){
     setAccent(s);
@@ -348,15 +370,29 @@ export function buildPricingUiPatch() {
     var back=document.getElementById('ppCheckoutBack');
     var err=document.getElementById('ppCheckoutError');
     back.addEventListener('click',function(){openTariffs(s);});
+    var submitting=false;
+    function showCheckoutOk(){
+      body.innerHTML='<div class="pp-checkout-ok"><strong>Заявка принята</strong><br>Мы получили сервис, тариф, цену и ваш контакт. Свяжемся в течение 5–15 минут и пришлём ссылку на оплату. Если срочно — <a href="https://t.me/Kimzar_A" target="_blank" style="color:#7BAEFF;">@Kimzar_A</a>.</div>';
+    }
     form.addEventListener('submit',function(e){
       e.preventDefault();
+      if(submitting) return;
+      err.style.display='none';
+      var hp=document.getElementById('ppCheckoutHp');
+      if(hp && hp.value){ showCheckoutOk(); return; }   // bot honeypot — pretend success, send nothing
       var email=document.getElementById('ppCheckoutEmail').value.trim();
       var channel=document.getElementById('ppCheckoutChannel').value.trim();
       var contact=document.getElementById('ppCheckoutContact').value.trim();
+      var agree=document.getElementById('ppCheckoutAgree');
       var emailOk = email && email.indexOf('@')>0 && email.indexOf('.')>email.indexOf('@');
       var contactOk = contact.length>=3;
       if(!emailOk && !contactOk){ err.textContent='Укажите контакт в мессенджере или почту — что-то одно'; err.style.display='block'; return; }
       if(email && !emailOk){ err.textContent='Почта введена с ошибкой — проверьте адрес'; err.style.display='block'; return; }
+      if(agree && !agree.checked){ err.textContent='Подтвердите согласие на обработку персональных данных'; err.style.display='block'; return; }
+      var dedupKey=reqKey(s.name+'|'+(tier?tier.label:''), contact||email);
+      var rc=recentlySent(dedupKey);
+      if(rc==='dup'){ showCheckoutOk(); return; }
+      if(rc==='cooldown'){ err.textContent='Заявка уже отправляется. Подождите несколько секунд.'; err.style.display='block'; return; }
       var priceText = tier && tier.rub ? money(tier.rub) : 'по запросу';
       var tierName = tier ? tier.label : 'Другой тариф / сумма';
       var contactParts=[];
@@ -364,6 +400,7 @@ export function buildPricingUiPatch() {
       if(emailOk) contactParts.push('Email: '+email);
       var contactLine = contactParts.join('; ');
       var submitBtn = form.querySelector('.pp-checkout-submit');
+      submitting=true;
       if(submitBtn){ submitBtn.disabled=true; submitBtn.textContent='Отправляем…'; }
       var msg=[
         'Заявка с сайта PlataPay (карточка тарифа)',
@@ -382,9 +419,11 @@ export function buildPricingUiPatch() {
         body: JSON.stringify({source:'tariff', service:s.name, tier:tierName, price:priceText, contact:contactLine, page:location.pathname, ts:Date.now()})
       }).then(function(){return true;}).catch(function(){return false;});
       Promise.all([tg,sh]).then(function(r){
+        submitting=false;
         if(r[0]||r[1]){
-          body.innerHTML='<div class="pp-checkout-ok"><strong>Заявка принята</strong><br>Мы получили сервис, тариф, цену и ваш контакт. Свяжемся в течение 5–15 минут и пришлём ссылку на оплату. Если срочно — <a href="https://t.me/Kimzar_A" target="_blank" style="color:#7BAEFF;">@Kimzar_A</a>.</div>';
-          if(window.ym) window.ym(109522965,'reachGoal','tariff_order');
+          markSent(dedupKey);
+          showCheckoutOk();
+          try{ if(typeof ym==='function'){ ym(109522965,'reachGoal','tariff_order'); ym(109522965,'reachGoal','zayavka_service'); } }catch(e){}
         } else {
           err.textContent='Не удалось отправить. Напишите в Telegram: @Kimzar_A'; err.style.display='block';
           if(submitBtn){ submitBtn.disabled=false; submitBtn.textContent='Продолжить к оплате'; }
