@@ -279,7 +279,9 @@ export function buildEnhancement(baseHref) {
     Promise.all([tg, sh]).then(function(r){
       if (r[0] || r[1]) {
         bodyEl.innerHTML = '<div class="pp-mm-ok"><h3>Заявка принята</h3><p style="color:#cfd9ef;margin:0;">Свяжемся в течение 5–15 минут. Если срочно — <a href="https://t.me/Kimzar_A" target="_blank" style="color:#2e7bff;">@Kimzar_A</a>.</p></div>';
-        if (window.ym) window.ym(109522965, 'reachGoal', 'main_order');
+        // Метрика — цель "заявка на сервис" (+ legacy main_order). Guarded so
+        // the form never breaks if ym failed to load.
+        try{ if(typeof ym==='function'){ ym(109522965,'reachGoal','zayavka_service'); ym(109522965,'reachGoal','main_order'); } }catch(e){}
       } else {
         err.textContent = 'Не удалось отправить. Напишите в Telegram: @Kimzar_A';
         err.hidden = false;

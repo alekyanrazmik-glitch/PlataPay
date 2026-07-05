@@ -501,5 +501,40 @@ export function buildPricingUiPatch() {
   }
 })();
 </script>
+<script>
+(function(){
+  // Yandex.Metrika goal: клик по Telegram/WhatsApp. Guarded so nothing
+  // breaks when ym failed to load. Injected on every page.
+  var YM = 109522965;
+  function ppGoal(name, cb){
+    var fired = false;
+    function go(){ if(fired) return; fired = true; if(cb) cb(); }
+    try{
+      if(typeof ym === 'function'){
+        ym(YM, 'reachGoal', name, cb ? { callback: go } : undefined);
+        if(cb) setTimeout(go, 700); // fallback if the callback never fires
+      } else if(cb){ go(); }
+    }catch(e){ if(cb) go(); }
+  }
+  window.ppGoal = window.ppGoal || ppGoal;
+  document.addEventListener('click', function(e){
+    var a = e.target.closest && e.target.closest('a[href]');
+    if(!a) return;
+    var href = a.getAttribute('href') || '';
+    if(!/(?:\\/\\/|^)(?:t\\.me|telegram\\.me|wa\\.me|api\\.whatsapp\\.com)/i.test(href) && !/whatsapp/i.test(href)) return;
+    // Telegram links already carry an inline onclick goal — skip to avoid
+    // double-counting; this handler covers WhatsApp and any missed links.
+    if((a.getAttribute('onclick') || '').indexOf('klik_telegram') > -1) return;
+    // New tab / modified click: the page stays, so just fire the goal.
+    if(a.target === '_blank' || e.ctrlKey || e.metaKey || e.shiftKey || e.button === 1){
+      ppGoal('klik_telegram');
+      return;
+    }
+    // Same tab: send the goal first, then follow the link.
+    e.preventDefault();
+    ppGoal('klik_telegram', function(){ window.location.href = href; });
+  }, true);
+})();
+</script>
 `;
 }
