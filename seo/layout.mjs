@@ -256,6 +256,7 @@ ${faqLd}
     <nav class="top">
       <a href="${base}">Главная</a>
       <a href="${base}catalog/">Каталог</a>
+      <a href="https://travel.payoplata.ru" target="_blank" rel="noopener">Авиабилеты</a>
       <a href="${base}faq/">FAQ</a>
       <a href="${base}contacts/">Контакты</a>
     </nav>
@@ -341,6 +342,7 @@ ${faqLd}
     <div>
       <a href="${base}">Главная</a>
       <a href="${base}catalog/">Каталог</a>
+      <a href="https://travel.payoplata.ru" target="_blank" rel="noopener">Авиабилеты</a>
       <a href="${base}faq/">FAQ</a>
       <a href="${base}contacts/">Контакты</a>
     </div>
