@@ -347,6 +347,11 @@ document.addEventListener('DOMContentLoaded',t_setvisRecs);}})();</script></head
     position:relative; text-decoration:none; cursor:pointer;
     background:linear-gradient(160deg, rgba(46,123,255,.22), rgba(123,174,255,.06));
     border-color:var(--accent2);
+    /* The badge can wrap onto its own line under the name (see below),
+       which needs more than the shared cards' fixed 150px — grow instead
+       of clipping/overflowing. Grid rows auto-size to the tallest cell,
+       so this just makes row 1 a bit taller; it doesn't shrink siblings. */
+    height:auto; min-height:150px;
   }
   .pp-pc-flight:hover{background:linear-gradient(160deg, rgba(46,123,255,.30), rgba(123,174,255,.10));}
   /* Badge sits in the same flex row as icon+name (not absolutely
