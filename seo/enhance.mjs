@@ -154,6 +154,12 @@ export function buildEnhancement(baseHref) {
   .pp-mm-modal .pp-mm-ok h3{color:#22C55E;}
   .pp-mm-modal .pp-mm-consent{margin-top:14px;font-size:12px;color:#8499c0;text-align:center;}
   .pp-mm-modal .pp-mm-consent a{color:#7BAEFF;}
+  .pp-mm-modal .pp-mm-check{display:flex;align-items:flex-start;gap:9px;margin-top:16px;font-size:12.5px;line-height:1.45;color:#9fb2d4;cursor:pointer;}
+  .pp-mm-modal .pp-mm-check input{width:18px;height:18px;min-width:18px;margin:1px 0 0;accent-color:#2e7bff;cursor:pointer;padding:0;}
+  .pp-mm-modal .pp-mm-check a{color:#7BAEFF;text-decoration:none;}
+  .pp-mm-modal .pp-mm-check a:hover{text-decoration:underline;}
+  /* honeypot — visually hidden, off-screen, invisible to real users */
+  .pp-mm-hp{position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none;}
 
   /* autocomplete dropdown */
   .pp-ac-wrap{position:relative;}
@@ -180,6 +186,8 @@ export function buildEnhancement(baseHref) {
       <input type="text" id="pp-mm-srv" placeholder="ChatGPT, Spotify, Adobe…" autocomplete="off">
       <label for="pp-mm-ctc">Телефон, Telegram или email</label>
       <input type="text" id="pp-mm-ctc" placeholder="+7 999 123-45-67 или @username" autocomplete="off">
+      <div class="pp-mm-hp"><label>Компания<input type="text" id="pp-mm-hp" tabindex="-1" autocomplete="off"></label></div>
+      <label class="pp-mm-check"><input type="checkbox" id="pp-mm-agree"><span>Я согласен на <a href="#popuppolicy">обработку персональных данных</a> и принимаю <a href="#popupoferta">оферту</a></span></label>
       <div class="pp-mm-err" id="pp-mm-err" hidden></div>
       <button class="pp-mm-go" id="pp-mm-go">Оплатить</button>
       <div class="pp-mm-alt">
@@ -187,7 +195,6 @@ export function buildEnhancement(baseHref) {
         <a href="https://t.me/Kimzar_A" target="_blank" rel="noopener">Telegram</a> ·
         <a href="https://wa.me/79676726909" target="_blank" rel="noopener">WhatsApp</a>
       </div>
-      <div class="pp-mm-consent">Нажимая «Оплатить», вы соглашаетесь с <a href="#popuppolicy">политикой обработки данных</a>.</div>
     </div>
   </div>
 </div>
@@ -209,6 +216,31 @@ export function buildEnhancement(baseHref) {
   var ctc   = document.getElementById('pp-mm-ctc');
   var err   = document.getElementById('pp-mm-err');
   var btn   = document.getElementById('pp-mm-go');
+  var agree = document.getElementById('pp-mm-agree');
+  var hp    = document.getElementById('pp-mm-hp');
+  var submitting = false;
+
+  // --- Anti-duplicate: remember recent submissions so the same request
+  // isn't sent again (double-tap, re-open, refresh). Stored per contact+
+  // service for 30 min; plus a short global cooldown against rapid spam.
+  var DEDUP_MS = 30 * 60 * 1000;   // same request blocked for 30 min
+  var COOLDOWN_MS = 15 * 1000;     // any new request throttled 15 s
+  function reqKey(sv, cv){ return (sv + '|' + cv).toLowerCase().replace(/\\s+/g,''); }
+  function ls(){ try { return window.localStorage; } catch(e){ return null; } }
+  function recentlySent(key){
+    var s = ls(); if (!s) return false;
+    try {
+      var last = +s.getItem('ppReqLast') || 0;
+      if (Date.now() - last < COOLDOWN_MS) return 'cooldown';
+      var t = +s.getItem('ppReq_' + key) || 0;
+      if (Date.now() - t < DEDUP_MS) return 'dup';
+    } catch(e){}
+    return false;
+  }
+  function markSent(key){
+    var s = ls(); if (!s) return;
+    try { s.setItem('ppReq_' + key, '' + Date.now()); s.setItem('ppReqLast', '' + Date.now()); } catch(e){}
+  }
 
   function openMini(prefill){
     if (prefill) srv.value = prefill;
@@ -251,12 +283,28 @@ export function buildEnhancement(baseHref) {
     openMini(hint);
   }, true);
 
+  function showSent(){
+    bodyEl.innerHTML = '<div class="pp-mm-ok"><h3>Заявка принята</h3><p style="color:#cfd9ef;margin:0;">Свяжемся в течение 5–15 минут. Если срочно — <a href="https://t.me/Kimzar_A" target="_blank" style="color:#2e7bff;">@Kimzar_A</a>.</p></div>';
+  }
+
   btn.addEventListener('click', function(){
+    if (submitting) return;                       // in-flight guard
     err.hidden = true;
+    // Honeypot — real users never see/fill this field. If filled, it's a bot:
+    // pretend success and send nothing.
+    if (hp && hp.value) { showSent(); return; }
     var sv = srv.value.trim();
     var cv = ctc.value.trim();
     if (!sv) { err.textContent='Укажите сервис'; err.hidden=false; srv.focus(); return; }
     if (cv.length < 4) { err.textContent='Введите контакт — телефон, @username или email'; err.hidden=false; ctc.focus(); return; }
+    if (agree && !agree.checked) { err.textContent='Подтвердите согласие на обработку персональных данных'; err.hidden=false; return; }
+
+    var key = reqKey(sv, cv);
+    var rc = recentlySent(key);
+    if (rc === 'dup') { showSent(); return; }      // same request already sent — don't resend
+    if (rc === 'cooldown') { err.textContent='Заявка уже отправляется. Подождите несколько секунд.'; err.hidden=false; return; }
+
+    submitting = true;
     btn.disabled = true; btn.textContent = 'Отправляем…';
 
     var msg = [
@@ -277,8 +325,10 @@ export function buildEnhancement(baseHref) {
     }).then(function(){return true;}).catch(function(){return false;});
 
     Promise.all([tg, sh]).then(function(r){
+      submitting = false;
       if (r[0] || r[1]) {
-        bodyEl.innerHTML = '<div class="pp-mm-ok"><h3>Заявка принята</h3><p style="color:#cfd9ef;margin:0;">Свяжемся в течение 5–15 минут. Если срочно — <a href="https://t.me/Kimzar_A" target="_blank" style="color:#2e7bff;">@Kimzar_A</a>.</p></div>';
+        markSent(key);
+        showSent();
         // Метрика — цель "заявка на сервис" (+ legacy main_order). Guarded so
         // the form never breaks if ym failed to load.
         try{ if(typeof ym==='function'){ ym(109522965,'reachGoal','zayavka_service'); ym(109522965,'reachGoal','main_order'); } }catch(e){}
