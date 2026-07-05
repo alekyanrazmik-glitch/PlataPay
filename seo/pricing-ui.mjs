@@ -576,15 +576,17 @@ export function buildPricingUiPatch() {
 })();
 </script>
 <style id="pp-cookie-style">
-  .pp-cookie{position:fixed;left:16px;right:16px;bottom:16px;z-index:100001;max-width:560px;margin:0 auto;background:linear-gradient(180deg,#0c1f40,#13294e);border:1px solid #1d3a6b;border-radius:16px;padding:16px 18px;box-shadow:0 24px 60px -20px rgba(0,0,0,.6);color:#cfd9ef;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',system-ui,sans-serif;font-size:13px;line-height:1.5;display:flex;flex-wrap:wrap;align-items:center;gap:12px;animation:ppCookieUp .35s ease;}
-  @keyframes ppCookieUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:none;}}
+  /* Bottom-right card (OZON-style layout) in PlataPay's own colours. */
+  .pp-cookie{position:fixed;right:20px;bottom:20px;left:auto;z-index:100001;width:360px;max-width:calc(100vw - 32px);background:linear-gradient(180deg,#0c1f40,#13294e);border:1px solid #1d3a6b;border-radius:18px;padding:22px 22px 18px;box-shadow:0 30px 70px -24px rgba(0,0,0,.7);color:#a9bbdd;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',system-ui,sans-serif;animation:ppCookieUp .35s ease;}
+  @keyframes ppCookieUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:none;}}
   .pp-cookie[hidden]{display:none;}
-  .pp-cookie p{margin:0;flex:1 1 260px;}
+  .pp-cookie h4{margin:0 0 10px;font-size:19px;font-weight:800;line-height:1.25;letter-spacing:-.01em;color:#eef3ff;}
+  .pp-cookie p{margin:0 0 16px;font-size:13.5px;line-height:1.55;color:#a9bbdd;}
   .pp-cookie a{color:#7BAEFF;text-decoration:none;}
   .pp-cookie a:hover{text-decoration:underline;}
-  .pp-cookie button{flex:0 0 auto;background:linear-gradient(180deg,#2e7bff,#1e5fd6);color:#fff;border:none;border-radius:10px;padding:10px 20px;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit;}
+  .pp-cookie button{width:100%;background:linear-gradient(180deg,#2e7bff,#1e5fd6);color:#fff;border:none;border-radius:12px;padding:13px;font-weight:700;font-size:15px;cursor:pointer;font-family:inherit;box-shadow:0 12px 28px -12px rgba(46,123,255,.9);}
   .pp-cookie button:hover{filter:brightness(1.08);}
-  @media(max-width:520px){.pp-cookie button{width:100%;}}
+  @media(max-width:520px){.pp-cookie{right:12px;left:12px;bottom:12px;width:auto;max-width:none;padding:18px;}}
 </style>
 <script>
 (function(){
@@ -600,7 +602,7 @@ export function buildPricingUiPatch() {
     bar.id = 'pp-cookie';
     bar.setAttribute('role','dialog');
     bar.setAttribute('aria-label','Уведомление о файлах cookie');
-    bar.innerHTML = '<p>Мы используем файлы cookie и сервис Яндекс.Метрика для аналитики. Продолжая пользоваться сайтом, вы соглашаетесь с <a href="'+policy+'">политикой обработки данных</a>.</p><button type="button">Хорошо</button>';
+    bar.innerHTML = '<h4>Мы используем файлы cookie</h4><p>Это чтобы сайт работал лучше, а мы видели статистику через Яндекс.Метрику. Оставаясь на сайте, вы соглашаетесь с использованием файлов cookie и <a href="'+policy+'">политикой обработки данных</a>.</p><button type="button">Хорошо</button>';
     bar.querySelector('button').addEventListener('click', function(){
       try{ localStorage.setItem('ppCookieOk','1'); }catch(e){}
       bar.hidden = true;
