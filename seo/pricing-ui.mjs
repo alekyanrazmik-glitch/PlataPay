@@ -430,6 +430,7 @@ export function buildPricingUiPatch() {
         }).then(function(r){ return r.json().catch(function(){return null;}).then(function(data){ return {ok:r.ok, data:data}; }); })
         .then(function(res){
           if(res.ok && res.data && res.data.payment_url){
+            if(window.ym) window.ym(109522965,'reachGoal','zayavka_service');
             window.location.href = res.data.payment_url;
           } else {
             sendLeadFallback(true);
