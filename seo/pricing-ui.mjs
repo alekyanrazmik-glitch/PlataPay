@@ -536,5 +536,42 @@ export function buildPricingUiPatch() {
   }, true);
 })();
 </script>
+<style id="pp-cookie-style">
+  .pp-cookie{position:fixed;left:16px;right:16px;bottom:16px;z-index:100001;max-width:560px;margin:0 auto;background:linear-gradient(180deg,#0c1f40,#13294e);border:1px solid #1d3a6b;border-radius:16px;padding:16px 18px;box-shadow:0 24px 60px -20px rgba(0,0,0,.6);color:#cfd9ef;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',system-ui,sans-serif;font-size:13px;line-height:1.5;display:flex;flex-wrap:wrap;align-items:center;gap:12px;animation:ppCookieUp .35s ease;}
+  @keyframes ppCookieUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:none;}}
+  .pp-cookie[hidden]{display:none;}
+  .pp-cookie p{margin:0;flex:1 1 260px;}
+  .pp-cookie a{color:#7BAEFF;text-decoration:none;}
+  .pp-cookie a:hover{text-decoration:underline;}
+  .pp-cookie button{flex:0 0 auto;background:linear-gradient(180deg,#2e7bff,#1e5fd6);color:#fff;border:none;border-radius:10px;padding:10px 20px;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit;}
+  .pp-cookie button:hover{filter:brightness(1.08);}
+  @media(max-width:520px){.pp-cookie button{width:100%;}}
+</style>
+<script>
+(function(){
+  // Cookie notice — site uses cookies (incl. Яндекс.Метрика). Shown once,
+  // acceptance stored in localStorage. Fails silently if storage blocked.
+  function seen(){ try{ return localStorage.getItem('ppCookieOk')==='1'; }catch(e){ return false; } }
+  if(seen()) return;
+  function build(){
+    if(document.getElementById('pp-cookie')) return;
+    var policy = (location.pathname === '/' || location.pathname === '') ? '#popuppolicy' : '/#popuppolicy';
+    var bar = document.createElement('div');
+    bar.className = 'pp-cookie';
+    bar.id = 'pp-cookie';
+    bar.setAttribute('role','dialog');
+    bar.setAttribute('aria-label','Уведомление о файлах cookie');
+    bar.innerHTML = '<p>Мы используем файлы cookie и сервис Яндекс.Метрика для аналитики. Продолжая пользоваться сайтом, вы соглашаетесь с <a href="'+policy+'">политикой обработки данных</a>.</p><button type="button">Хорошо</button>';
+    bar.querySelector('button').addEventListener('click', function(){
+      try{ localStorage.setItem('ppCookieOk','1'); }catch(e){}
+      bar.hidden = true;
+      if(bar.parentNode) bar.parentNode.removeChild(bar);
+    });
+    document.body.appendChild(bar);
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', build);
+  else build();
+})();
+</script>
 `;
 }
