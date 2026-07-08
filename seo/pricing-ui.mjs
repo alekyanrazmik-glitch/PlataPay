@@ -210,7 +210,7 @@ export function buildPricingUiPatch() {
   var RATE = ${RATE_RUB_PER_USD};
   var FEE = ${SERVICE_FEE_RUB};
   var LOGO_BASE = 'https://raw.githubusercontent.com/alekyanrazmik-glitch/Just-PlataPay/master/';
-  var BOT = '8842294846:AAEYOKRa-M80_fnZGu1Qk_fbmB7fknIR8UE';
+  var BOT = '8842294846:AAGU2BA3RNFSWugpwKlFbnS9ucMluKzP4pg';
   var CHAT = '523060537';
   var SHEETS = 'https://script.google.com/macros/s/AKfycbyy43Ff5kKivrUsaXWEkda7JXNwHrOI-3BJIJp3UG9H8K6cb4DxjpC8eXNPGNEXQEWt/exec';
   var mask = document.getElementById('ppTariffMask');
