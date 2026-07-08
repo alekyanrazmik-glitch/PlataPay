@@ -1239,13 +1239,17 @@ document.addEventListener('DOMContentLoaded',t_setvisRecs);}})();</script></head
     var fullPhone = ccode + " " + elPhone.value;
 
     var L=[];
+    // Экранируем пользовательский ввод: сообщение уходит parse_mode:"HTML",
+    // и символы & < > в тексте пользователя иначе ломают разбор → Telegram 400
+    // → заявка не доходит. Статические <b>-подписи не трогаем.
+    var esc=function(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");};
     L.push("🟦 <b>Заявка на оплату (PlataPay)</b>");
-    L.push("<b>Сервис:</b> "+srv);
-    if(planText) L.push("<b>Тариф:</b> "+planText);
-    L.push("<b>Имя:</b> "+name);
-    L.push("<b>Телефон:</b> "+cflag+" "+fullPhone);
-    L.push("<b>Способ связи:</b> "+channel+(channel!=="Телефон" && contact ? " — "+contact : ""));
-    if(note)    L.push("<b>Доп. инфо:</b> "+note);
+    L.push("<b>Сервис:</b> "+esc(srv));
+    if(planText) L.push("<b>Тариф:</b> "+esc(planText));
+    L.push("<b>Имя:</b> "+esc(name));
+    L.push("<b>Телефон:</b> "+cflag+" "+esc(fullPhone));
+    L.push("<b>Способ связи:</b> "+esc(channel)+(channel!=="Телефон" && contact ? " — "+esc(contact) : ""));
+    if(note)    L.push("<b>Доп. инфо:</b> "+esc(note));
     L.push("");
     L.push("🌐 "+(location.host||"сайт"));
 
@@ -1286,8 +1290,11 @@ document.addEventListener('DOMContentLoaded',t_setvisRecs);}})();</script></head
     function tryFinish(){
       if(finished||!sheetsDone||!tgDone) return;
       finished=true;
-      if(sheetsSent||tgOk){ showSuccess(); }
-      else{ btn.disabled=false; btn.textContent="Отправить заявку"; err.textContent="Не удалось отправить. Попробуйте ещё раз или напишите нам в Telegram."; }
+      // Успех — только по подтверждённой доставке в Telegram (tgOk). Sheets идёт
+      // через no-cors, его результат браузеру не виден и всегда «истина», поэтому
+      // им нельзя подтверждать доставку. Остаётся резервной записью.
+      if(tgOk){ showSuccess(); }
+      else{ btn.disabled=false; btn.textContent="Отправить заявку"; err.textContent="Не удалось отправить. Попробуйте ещё раз или напишите нам в Telegram: @Kimzar_A"; }
     }
 
     try{
