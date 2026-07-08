@@ -1,7 +1,4 @@
-import { SERVICES } from './data.mjs';
-
-const RATE_RUB_PER_USD = 80;
-const SERVICE_FEE_RUB = 1000;
+import { SERVICES, usdToRub, RATE_RUB_PER_USD, SERVICE_FEE_RUB } from './data.mjs';
 
 const CUSTOM_ALIASES = {
   'adobe-cc': ['Adobe CC', 'Adobe', 'Adobe Creative Cloud'],
@@ -80,10 +77,6 @@ const BRAND_ACCENTS = {
   airbnb: '#ff385c', booking: '#003580', agoda: '#5b2bcb', airalo: '#f4364c',
 };
 
-function rubFromUsd(usd) {
-  return Math.round(usd * RATE_RUB_PER_USD + SERVICE_FEE_RUB);
-}
-
 function cleanPlanName(tier) {
   const text = String(tier || '').trim();
   const noPrice = text.replace(/\s*\([^)]*\$[^)]*\)\s*/g, '').replace(/\s*\$\s*\d+(?:[.,]\d+)?\s*/g, '').trim();
@@ -98,7 +91,7 @@ function tierToData(tier) {
     label,
     plan: cleanPlanName(label),
     usd,
-    rub: usd === null ? null : rubFromUsd(usd),
+    rub: usd === null ? null : usdToRub(usd),
   };
 }
 
