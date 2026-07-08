@@ -226,7 +226,7 @@ ${faqLd}
 
     var tg = fetch('https://api.telegram.org/bot'+BOT+'/sendMessage', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({chat_id:CHAT, text:msg, parse_mode:'HTML', disable_web_page_preview:true})
+      body: JSON.stringify({chat_id:CHAT, text:msg, disable_web_page_preview:true})
     }).then(function(r){return r.ok;}).catch(function(){return false;});
 
     var sheet = fetch(SHEETS, {
@@ -235,7 +235,10 @@ ${faqLd}
     }).then(function(){return true;}).catch(function(){return false;});
 
     Promise.all([tg, sheet]).then(function(res){
-      if (res[0] || res[1]) {
+      // Успех и цель Метрики — только по подтверждённой доставке в Telegram
+      // (res[0]). Sheets через no-cors всегда «успешен» для браузера, поэтому
+      // им нельзя подтверждать доставку. Остаётся резервной записью.
+      if (res[0]) {
         card.innerHTML = '<div class="ok"><h3>Заявка принята</h3><p>Свяжемся в течение 5–15 минут по указанному контакту. Если срочно — напишите в Telegram: <a href="https://t.me/Kimzar_A" target="_blank" rel="noopener">@Kimzar_A</a>.</p></div>';
         if (window.ym) window.ym(109522965, 'reachGoal', 'seo_order');
       } else {

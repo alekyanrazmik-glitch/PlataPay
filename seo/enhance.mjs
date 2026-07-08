@@ -186,7 +186,7 @@ export function buildEnhancement(baseHref) {
       <input type="text" id="pp-mm-srv" placeholder="ChatGPT, Spotify, Adobe…" autocomplete="off">
       <label for="pp-mm-ctc">Телефон, Telegram или email</label>
       <input type="text" id="pp-mm-ctc" placeholder="+7 999 123-45-67 или @username" autocomplete="off">
-      <div class="pp-mm-hp"><label>Компания<input type="text" id="pp-mm-hp" tabindex="-1" autocomplete="off"></label></div>
+      <div class="pp-mm-hp" aria-hidden="true"><label>Компания<input type="text" id="pp-mm-hp" tabindex="-1" autocomplete="off" data-lpignore="true" data-1p-ignore data-form-type="other"></label></div>
       <label class="pp-mm-check"><input type="checkbox" id="pp-mm-agree"><span>Я согласен на <a href="#popuppolicy">обработку персональных данных</a> и принимаю <a href="#popupoferta">оферту</a></span></label>
       <div class="pp-mm-err" id="pp-mm-err" hidden></div>
       <button class="pp-mm-go" id="pp-mm-go">Оплатить</button>
@@ -316,7 +316,7 @@ export function buildEnhancement(baseHref) {
 
     var tg = fetch('https://api.telegram.org/bot' + BOT + '/sendMessage', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({chat_id:CHAT, text:msg, parse_mode:'HTML', disable_web_page_preview:true})
+      body: JSON.stringify({chat_id:CHAT, text:msg, disable_web_page_preview:true})
     }).then(function(r){return r.ok;}).catch(function(){return false;});
 
     var sh = fetch(SHEETS, {
@@ -326,7 +326,11 @@ export function buildEnhancement(baseHref) {
 
     Promise.all([tg, sh]).then(function(r){
       submitting = false;
-      if (r[0] || r[1]) {
+      // Успех = доставка в Telegram подтверждена (r[0]). Запрос в Google Sheets
+      // идёт в режиме no-cors — браузер не видит его настоящий результат и он
+      // всегда «успешен», поэтому по нему нельзя судить о доставке и нельзя
+      // засчитывать цель Метрики. Sheets остаётся резервной записью.
+      if (r[0]) {
         markSent(key);
         showSent();
         // Метрика — цель "заявка на сервис" (+ legacy main_order). Guarded so

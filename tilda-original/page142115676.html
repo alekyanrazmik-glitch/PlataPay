@@ -1385,13 +1385,17 @@ tabindex="-1"> <div class="t-popup__container t-width t-valign_middle"> </div> <
     var fullPhone = ccode + " " + elPhone.value;
 
     var L=[];
+    // Экранируем пользовательский ввод: сообщение уходит parse_mode:"HTML",
+    // и символы & < > в тексте пользователя иначе ломают разбор → Telegram 400
+    // → заявка не доходит. Статические <b>-подписи не трогаем.
+    var esc=function(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");};
     L.push("🟦 <b>Заявка на оплату (PlataPay)</b>");
-    L.push("<b>Сервис:</b> "+srv);
-    if(planText) L.push("<b>Тариф:</b> "+planText);
-    L.push("<b>Имя:</b> "+name);
-    L.push("<b>Телефон:</b> "+cflag+" "+fullPhone);
-    L.push("<b>Способ связи:</b> "+channel+(channel!=="Телефон" && contact ? " — "+contact : ""));
-    if(note)    L.push("<b>Доп. инфо:</b> "+note);
+    L.push("<b>Сервис:</b> "+esc(srv));
+    if(planText) L.push("<b>Тариф:</b> "+esc(planText));
+    L.push("<b>Имя:</b> "+esc(name));
+    L.push("<b>Телефон:</b> "+cflag+" "+esc(fullPhone));
+    L.push("<b>Способ связи:</b> "+esc(channel)+(channel!=="Телефон" && contact ? " — "+esc(contact) : ""));
+    if(note)    L.push("<b>Доп. инфо:</b> "+esc(note));
     L.push("");
     L.push("🌐 "+(location.host||"сайт"));
 
@@ -1432,8 +1436,11 @@ tabindex="-1"> <div class="t-popup__container t-width t-valign_middle"> </div> <
     function tryFinish(){
       if(finished||!sheetsDone||!tgDone) return;
       finished=true;
-      if(sheetsSent||tgOk){ showSuccess(); }
-      else{ btn.disabled=false; btn.textContent="Отправить заявку"; err.textContent="Не удалось отправить. Попробуйте ещё раз или напишите нам в Telegram."; }
+      // Успех — только по подтверждённой доставке в Telegram (tgOk). Sheets идёт
+      // через no-cors, его результат браузеру не виден и всегда «истина», поэтому
+      // им нельзя подтверждать доставку. Остаётся резервной записью.
+      if(tgOk){ showSuccess(); }
+      else{ btn.disabled=false; btn.textContent="Отправить заявку"; err.textContent="Не удалось отправить. Попробуйте ещё раз или напишите нам в Telegram: @Kimzar_A"; }
     }
 
     try{
@@ -1682,17 +1689,20 @@ tabindex="-1"> <div class="t-popup__container t-width t-valign_middle"> </div> <
     if(!agree){ err.textContent="Поставьте согласие на обработку данных"; return; }
 
     var L=[];
+    // Экранируем пользовательский ввод (parse_mode:"HTML"): & < > иначе ломают
+    // разбор → Telegram 400 → инвойс-заявка не доходит. Подписи <b> статические.
+    var esc=function(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");};
     L.push("📄 <b>Заявка на оплату ИНВОЙСА (PlataPay)</b>");
-    L.push("<b>Имя:</b> "+name);
-    L.push("<b>Способ связи:</b> "+channel);
-    L.push("<b>Телефон:</b> "+phone);
-    if(contact)  L.push("<b>Доп. контакт:</b> "+contact);
-    L.push("<b>Получатель:</b> "+payee);
-    L.push("<b>Сумма:</b> "+amount+" "+currency);
-    L.push("<b>Назначение:</b> "+purpose);
-    if(bank)     L.push("<b>Реквизиты:</b>\n"+bank);
-    if(deadline) L.push("<b>Срок:</b> "+deadline);
-    if(note)     L.push("<b>Доп. инфо:</b> "+note);
+    L.push("<b>Имя:</b> "+esc(name));
+    L.push("<b>Способ связи:</b> "+esc(channel));
+    L.push("<b>Телефон:</b> "+esc(phone));
+    if(contact)  L.push("<b>Доп. контакт:</b> "+esc(contact));
+    L.push("<b>Получатель:</b> "+esc(payee));
+    L.push("<b>Сумма:</b> "+esc(amount)+" "+esc(currency));
+    L.push("<b>Назначение:</b> "+esc(purpose));
+    if(bank)     L.push("<b>Реквизиты:</b>\n"+esc(bank));
+    if(deadline) L.push("<b>Срок:</b> "+esc(deadline));
+    if(note)     L.push("<b>Доп. инфо:</b> "+esc(note));
     L.push("");
     L.push("🌐 "+(location.host||"сайт"));
 
@@ -1734,11 +1744,14 @@ tabindex="-1"> <div class="t-popup__container t-width t-valign_middle"> </div> <
       if(finished) return;
       if(!sheetsDone || !tgDone) return;
       finished = true;
-      if(sheetsSent || tgOk){
+      // Успех — только по подтверждённой доставке в Telegram (tgOk выставляется
+      // лишь после того, как ушли и текст, и файл через sendDocument). Sheets
+      // через no-cors всегда «успешен» для браузера — им доставку не подтвердить.
+      if(tgOk){
         showSuccess();
       } else {
         btn.disabled=false; btn.textContent="Отправить заявку";
-        err.textContent="Не удалось отправить. Проверьте интернет, размер файла (до "+MAX_MB+" МБ) и попробуйте снова.";
+        err.textContent="Не удалось отправить. Проверьте интернет, размер файла (до "+MAX_MB+" МБ) и попробуйте снова — или напишите нам в Telegram: @Kimzar_A.";
       }
     }
 
