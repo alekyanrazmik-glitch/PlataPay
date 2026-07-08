@@ -2,6 +2,20 @@
 // generator. Keep this hand-curated so each page has real substance
 // instead of template substitution alone.
 
+// --- Pricing formula (single source of truth) --------------------------
+// Rub price = official USD price × rate + fixed service fee, rounded.
+// Subscriptions of $20 and under keep the old $80 rate so their prices
+// don't change; anything above $20 uses the current $85 rate.
+export const RATE_RUB_PER_USD = 85;
+export const RATE_RUB_PER_USD_SMALL = 80;
+export const SMALL_USD_THRESHOLD = 20;
+export const SERVICE_FEE_RUB = 1000;
+
+export function usdToRub(usd) {
+  const rate = usd <= SMALL_USD_THRESHOLD ? RATE_RUB_PER_USD_SMALL : RATE_RUB_PER_USD;
+  return Math.round(usd * rate + SERVICE_FEE_RUB);
+}
+
 export const CATEGORIES = {
   AI: {
     title: 'AI и нейросети',
@@ -409,7 +423,7 @@ for (const service of SERVICES) {
   const prices = tiers
     .map((t) => {
       const m = String(t).match(/\$\s*(\d+(?:[.,]\d+)?)/);
-      return m ? Math.round(Number(m[1].replace(',', '.')) * 80 + 1000) : null;
+      return m ? usdToRub(Number(m[1].replace(',', '.'))) : null;
     })
     .filter((x) => x !== null);
   if (prices.length) service.price = Math.min(...prices);
@@ -424,7 +438,7 @@ for (const service of SERVICES) {
   const prices = (service.tiers || [])
     .map((t) => {
       const m = String(t).match(/\$\s*(\d+(?:[.,]\d+)?)/);
-      return m ? Math.round(Number(m[1].replace(',', '.')) * 80 + 1000) : null;
+      return m ? usdToRub(Number(m[1].replace(',', '.'))) : null;
     })
     .filter((x) => x !== null);
   if (prices.length) service.price = Math.min(...prices);

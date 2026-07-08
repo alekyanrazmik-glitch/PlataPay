@@ -1,7 +1,4 @@
-import { SERVICES } from './data.mjs';
-
-const RATE_RUB_PER_USD = 80;
-const SERVICE_FEE_RUB = 1000;
+import { SERVICES, usdToRub } from './data.mjs';
 
 const ALIASES = {
   chatgpt: ['ChatGPT Plus', 'ChatGPT Team'],
@@ -27,10 +24,6 @@ function norm(value) {
     .replace(/[^a-zа-я0-9]+/gi, '');
 }
 
-function rub(value) {
-  return Math.round(value * RATE_RUB_PER_USD + SERVICE_FEE_RUB);
-}
-
 function formatRub(value) {
   return new Intl.NumberFormat('ru-RU').format(value) + ' ₽';
 }
@@ -47,7 +40,7 @@ function bestPlanFromTiers(service) {
       const match = String(tier).match(/\$\s*(\d+(?:[.,]\d+)?)/);
       if (!match) return null;
       const usd = Number(match[1].replace(',', '.'));
-      return { plan: cleanPlanName(tier), rub: rub(usd) };
+      return { plan: cleanPlanName(tier), rub: usdToRub(usd) };
     })
     .filter(Boolean)
     .sort((a, b) => a.rub - b.rub);
