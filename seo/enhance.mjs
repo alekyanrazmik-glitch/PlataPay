@@ -284,7 +284,7 @@ export function buildEnhancement(baseHref) {
   }, true);
 
   function showSent(){
-    bodyEl.innerHTML = '<div class="pp-mm-ok"><h3>Заявка принята</h3><p style="color:#cfd9ef;margin:0;">Свяжемся в течение 5–15 минут. Если срочно — <a href="https://t.me/Kimzar_A" target="_blank" style="color:#2e7bff;">@Kimzar_A</a>.</p></div>';
+    bodyEl.innerHTML = '<div class="pp-mm-ok"><h3>Заявка принята</h3><p style="color:#cfd9ef;margin:0;">Свяжемся в течение 5–15 минут. Если срочно — <a href="https://t.me/Kimzar_A" target="_blank" rel="noopener" style="color:#2e7bff;">@Kimzar_A</a>.</p></div>';
   }
 
   btn.addEventListener('click', function(){

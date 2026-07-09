@@ -62,18 +62,18 @@ export function renderPage({
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <base href="${base}">
 <title>${page.title}</title>
-<meta name="description" content="${escapeAttr(page.description)}">
+<meta name="description" content="${escapeAttr(clampMeta(page.description))}">
 <link rel="canonical" href="${canonical}">
 <link rel="icon" href="${base}favicon.svg" type="image/svg+xml">
 <meta property="og:type" content="article">
 <meta property="og:locale" content="ru_RU">
 <meta property="og:site_name" content="PlataPay">
 <meta property="og:title" content="${escapeAttr(page.title)}">
-<meta property="og:description" content="${escapeAttr(page.description)}">
+<meta property="og:description" content="${escapeAttr(clampMeta(page.description))}">
 <meta property="og:url" content="${canonical}">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="${escapeAttr(page.title)}">
-<meta name="twitter:description" content="${escapeAttr(page.description)}">
+<meta name="twitter:description" content="${escapeAttr(clampMeta(page.description))}">
 ${verifyTags}
 ${breadcrumbLd}
 ${serviceLd}
@@ -240,7 +240,9 @@ ${faqLd}
       // им нельзя подтверждать доставку. Остаётся резервной записью.
       if (res[0]) {
         card.innerHTML = '<div class="ok"><h3>Заявка принята</h3><p>Свяжемся в течение 5–15 минут по указанному контакту. Если срочно — напишите в Telegram: <a href="https://t.me/Kimzar_A" target="_blank" rel="noopener">@Kimzar_A</a>.</p></div>';
-        if (window.ym) window.ym(109522965, 'reachGoal', 'seo_order');
+        // zayavka_service — единая цель «доставленная заявка» для всех форм;
+        // seo_order — сегментация «пришло с SEO-страницы».
+        if (window.ym) { window.ym(109522965, 'reachGoal', 'zayavka_service'); window.ym(109522965, 'reachGoal', 'seo_order'); }
       } else {
         err.textContent = 'Не удалось отправить. Напишите нам в Telegram: @Kimzar_A';
         err.hidden = false;
@@ -362,4 +364,14 @@ function escapeAttr(s) {
     .replace(/&/g, '&amp;')
     .replace(/"/g, '&quot;')
     .replace(/</g, '&lt;');
+}
+
+// Keep meta descriptions within the ~160-char SERP window: trim at the last
+// word boundary before the limit (no mid-word cut, no ellipsis).
+function clampMeta(s, max = 160) {
+  const t = String(s || '').trim();
+  if (t.length <= max) return t;
+  const cut = t.slice(0, max);
+  const sp = cut.lastIndexOf(' ');
+  return (sp > max * 0.6 ? cut.slice(0, sp) : cut).replace(/[\s,;:.—-]+$/, '');
 }

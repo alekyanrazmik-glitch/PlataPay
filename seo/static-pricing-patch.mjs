@@ -96,7 +96,10 @@ function patchCatalogServiceArray(html) {
 
 function patchHomePopularCards(html) {
   return html
-    .replace(/(<div class="pp-pc">[\s\S]*?<div class="pp-pc-name">)([^<]+)(<\/div>[\s\S]*?<div class="pp-pc-price">)<span>от<\/span> <b>([^<]*)(<\/b><\/div>)/g, (full, before, name, middle, oldPrice, after) => {
+    // The middle group is tempered so it can't run past THIS card's price cell
+    // into the next card's (which made e.g. WHOOP's match swallow App Store and
+    // stamp a stale "700 ₽" onto a service that should read "по запросу").
+    .replace(/(<div class="pp-pc">[\s\S]*?<div class="pp-pc-name">)([^<]+)(<\/div>(?:(?!<div class="pp-pc-price">)[\s\S])*?<div class="pp-pc-price">)<span>от<\/span> <b>([^<]*)(<\/b><\/div>)/g, (full, before, name, middle, oldPrice, after) => {
       const nextDisplay = displayForName(name);
       return nextDisplay ? `${before}${name}${middle}<b>${nextDisplay}${after}` : full;
     })

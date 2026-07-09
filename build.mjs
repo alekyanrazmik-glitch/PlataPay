@@ -466,6 +466,35 @@ function patchPage(html, isHome) {
   // replacement patterns and corrupt.
   html = html.replace('</body>', () => `${pricingUiPatch}${enhanceInject}${searchLayoutFix}</body>`);
 
+  // 7) Head hygiene on the four Tilda pages.
+  //  - Load Yandex Metrica from the official mc.yandex.ru (as the SEO pages do),
+  //    immediately, instead of a foreign jsdelivr mirror behind a 2s delay. That
+  //    mirror can be blocked by RU ISPs and the delay left the first 2s
+  //    uncounted — on the very pages that carry the invoice form. Keep
+  //    window.mainMetrikaId so tilda-events keeps working.
+  html = html
+    .replace('https://cdn.jsdelivr.net/npm/yandex-metrica-watch/tag.js', 'https://mc.yandex.ru/metrika/tag.js')
+    .replace('analytics">setTimeout(function(){(function(m,e,t,r,i,k,a){', 'analytics">(function(m,e,t,r,i,k,a){')
+    .replace('ecommerce:"dataLayer"});},2000);</script>', 'ecommerce:"dataLayer"});</script>');
+
+  //  - Canonical + og:url on sub-pages: the export hardcoded http:// without a
+  //    trailing slash; the real URLs (and the sitemap) are https + trailing slash.
+  html = html.replace(/http:\/\/payoplata\.ru\/(catalog|faq|contacts)(?![\w/])/g, 'https://payoplata.ru/$1/');
+
+  //  - lang="ru" on <html> (SEO pages already have it).
+  html = html.replace(/<html(?![^>]*\blang=)/i, '<html lang="ru"');
+
+  //  - Real meta descriptions on the thin FAQ / empty Contacts pages.
+  html = html
+    .replace(
+      '<meta name="description" content="Вопросы и ответы/поддержка"',
+      '<meta name="description" content="Ответы на частые вопросы об оплате зарубежных сервисов и подписок из России: сроки, способы оплаты, безопасность, возвраты. Оплатим ChatGPT, Netflix, Steam и другие."',
+    )
+    .replace(
+      '<title>Контакты</title>',
+      '<title>Контакты</title><meta name="description" content="Контакты PlataPay: напишите в Telegram или WhatsApp, чтобы оплатить зарубежные сервисы, подписки и счета из России. Отвечаем ежедневно с 08:00 до 24:00 МСК.">',
+    );
+
   return html;
 }
 

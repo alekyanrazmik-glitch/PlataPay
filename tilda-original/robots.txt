@@ -10,4 +10,4 @@ Disallow: /tilda/event*
 Disallow:
 
 
-Sitemap: http://payoplata.ru/sitemap.xml
+Sitemap: https://payoplata.ru/sitemap.xml
