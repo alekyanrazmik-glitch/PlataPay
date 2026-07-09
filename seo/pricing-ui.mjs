@@ -1,4 +1,4 @@
-import { SERVICES, usdToRub, RATE_RUB_PER_USD, SERVICE_FEE_RUB } from './data.mjs';
+import { SERVICES, usdToRub } from './data.mjs';
 
 const CUSTOM_ALIASES = {
   'adobe-cc': ['Adobe CC', 'Adobe', 'Adobe Creative Cloud'],
@@ -207,8 +207,6 @@ export function buildPricingUiPatch() {
 <script>
 (function(){
   var SERVICES = ${JSON.stringify(pricingServices)};
-  var RATE = ${RATE_RUB_PER_USD};
-  var FEE = ${SERVICE_FEE_RUB};
   var LOGO_BASE = 'https://raw.githubusercontent.com/alekyanrazmik-glitch/Just-PlataPay/master/';
   var BOT = '8842294846:AAGU2BA3RNFSWugpwKlFbnS9ucMluKzP4pg';
   var CHAT = '523060537';
@@ -365,7 +363,7 @@ export function buildPricingUiPatch() {
     back.addEventListener('click',function(){openTariffs(s);});
     var submitting=false;
     function showCheckoutOk(){
-      body.innerHTML='<div class="pp-checkout-ok"><strong>Заявка принята</strong><br>Мы получили сервис, тариф, цену и ваш контакт. Свяжемся в течение 5–15 минут и пришлём ссылку на оплату. Если срочно — <a href="https://t.me/Kimzar_A" target="_blank" style="color:#7BAEFF;">@Kimzar_A</a>.</div>';
+      body.innerHTML='<div class="pp-checkout-ok"><strong>Заявка принята</strong><br>Мы получили сервис, тариф, цену и ваш контакт. Свяжемся в течение 5–15 минут и пришлём ссылку на оплату. Если срочно — <a href="https://t.me/Kimzar_A" target="_blank" rel="noopener" style="color:#7BAEFF;">@Kimzar_A</a>.</div>';
     }
     form.addEventListener('submit',function(e){
       e.preventDefault();

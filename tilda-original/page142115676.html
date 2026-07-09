@@ -1722,8 +1722,9 @@ tabindex="-1"> <div class="t-popup__container t-width t-valign_middle"> </div> <
     }
 
     function showSuccess(){
-      // Метрика — цель "заявка на инвойс"
-      try{ if(typeof ym==="function"){ ym(109522965, 'reachGoal', 'zayavka_invoice'); } }catch(e){}
+      // Метрика: zayavka_service — единая цель «доставленная заявка» для ВСЕХ форм
+      // (по ней считаются лиды), zayavka_invoice — сегментация «это инвойс».
+      try{ if(typeof ym==="function"){ ym(109522965, 'reachGoal', 'zayavka_service'); ym(109522965, 'reachGoal', 'zayavka_invoice'); } }catch(e){}
 
       body.innerHTML = '<div class="ppi-success">'+
         '<div class="ppi-success-ic">'+
@@ -1768,6 +1769,8 @@ tabindex="-1"> <div class="t-popup__container t-width t-valign_middle"> </div> <
           contact: contact,
           phone:   phone,
           service: payee,
+          amount:  amount,
+          currency: currency,
           plan:    amount+" "+currency,
           purpose: purpose,
           bank:    bank,
