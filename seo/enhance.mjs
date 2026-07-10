@@ -315,6 +315,7 @@ export function buildEnhancement(baseHref) {
     ].join('\\n');
 
     var leadPayload = {source:'main', service:sv, contact:cv, page:location.pathname, ts:Date.now()};
+    try{ var _src=window.ppLeadSource?window.ppLeadSource():{}; for(var _k in _src){ leadPayload[_k]=_src[_k]; } }catch(e){}
     // Прямая отправка в Telegram — быстрый путь подтверждения. У части клиентов
     // (особенно из РФ) провайдер блокирует api.telegram.org, поэтому её сбой НЕ
     // должен проваливать заявку: резервно уходит запрос в Apps Script (Google

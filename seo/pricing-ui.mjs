@@ -211,6 +211,38 @@ export function buildPricingUiPatch() {
   var BOT = '8842294846:AAGU2BA3RNFSWugpwKlFbnS9ucMluKzP4pg';
   var CHAT = '523060537';
   var SHEETS = 'https://script.google.com/macros/s/AKfycbyy43Ff5kKivrUsaXWEkda7JXNwHrOI-3BJIJp3UG9H8K6cb4DxjpC8eXNPGNEXQEWt/exec';
+
+  // Источник перехода (первое касание): UTM-метки из ссылки объявления и
+  // реферер запоминаются на сессию, чтобы дойти до формы через внутренние
+  // переходы. Определяется один раз и переиспользуется всеми формами сайта.
+  if(!window.ppLeadSource){ window.ppLeadSource = function(){
+    try{ var c=window.sessionStorage.getItem('ppSrc'); if(c) return JSON.parse(c); }catch(e){}
+    var q={}, parts=(location.search||'').replace(/^\\?/,'').split('&');
+    for(var i=0;i<parts.length;i++){ var kv=parts[i].split('='); if(kv[0]) q[decodeURIComponent(kv[0])]=decodeURIComponent((kv[1]||'').replace(/\\+/g,' ')); }
+    var src={ utm_source:q.utm_source||'', utm_medium:q.utm_medium||'', utm_campaign:q.utm_campaign||'', ref:(document.referrer||'') };
+    try{ window.sessionStorage.setItem('ppSrc', JSON.stringify(src)); }catch(e2){}
+    return src;
+  }; }
+
+  // Логируем переходы по ссылкам «Написать в Telegram»/WhatsApp в таблицу
+  // (отдельной строкой «Переход в …»). tgSent:true — чтобы сервер не слал по
+  // такому клику письмо и уведомление. sendBeacon переживает уход со страницы.
+  if(!window.ppClickLogged){ window.ppClickLogged=true;
+    document.addEventListener('click', function(e){
+      var a = e.target.closest && e.target.closest('a[href*="t.me/"],a[href*="telegram.me"],a[href*="wa.me/"],a[href*="api.whatsapp.com"]');
+      if(!a) return;
+      var href = a.getAttribute('href') || '';
+      var isWa = /wa\\.me|whatsapp/i.test(href);
+      var s = window.ppLeadSource ? window.ppLeadSource() : {};
+      var payload = { event:'click', type:'Переход в '+(isWa?'WhatsApp':'Telegram'), contact:href, page:location.pathname, ts:Date.now(), tgSent:true, utm_source:s.utm_source||'', utm_medium:s.utm_medium||'', utm_campaign:s.utm_campaign||'', ref:s.ref||'' };
+      try{
+        var body = JSON.stringify(payload);
+        if(navigator.sendBeacon){ navigator.sendBeacon(SHEETS, new Blob([body],{type:'text/plain;charset=utf-8'})); }
+        else { fetch(SHEETS,{method:'POST',mode:'no-cors',keepalive:true,headers:{'Content-Type':'text/plain;charset=utf-8'},body:body}); }
+      }catch(err){}
+    }, true);
+  }
+
   var mask = document.getElementById('ppTariffMask');
   var modal = document.getElementById('ppTariffModal');
   var body = document.getElementById('ppTariffBody');
@@ -402,6 +434,7 @@ export function buildPricingUiPatch() {
         'Страница: https://payoplata.ru'+location.pathname
       ].join('\\n');
       var leadPayload={source:'tariff', service:s.name, tier:tierName, price:priceText, contact:contactLine, page:location.pathname, ts:Date.now()};
+      try{ var _src=window.ppLeadSource?window.ppLeadSource():{}; for(var _k in _src){ leadPayload[_k]=_src[_k]; } }catch(e){}
       // Прямая отправка в Telegram — быстрый путь подтверждения. У части
       // клиентов (особенно из РФ) провайдер блокирует api.telegram.org,
       // поэтому её сбой НЕ должен проваливать заявку: резервно уходит запрос

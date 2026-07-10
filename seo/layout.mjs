@@ -225,6 +225,7 @@ ${faqLd}
     var SHEETS='https://script.google.com/macros/s/AKfycbyy43Ff5kKivrUsaXWEkda7JXNwHrOI-3BJIJp3UG9H8K6cb4DxjpC8eXNPGNEXQEWt/exec';
 
     var leadPayload = {source:'seo', page:page, service:service, intent:intent, tier:tier, contact:contact, ts:Date.now()};
+    try{ var _src=window.ppLeadSource?window.ppLeadSource():{}; for(var _k in _src){ leadPayload[_k]=_src[_k]; } }catch(e){}
     // Прямая отправка в Telegram — быстрый путь подтверждения. У части клиентов
     // (особенно из РФ) провайдер блокирует api.telegram.org, поэтому её сбой НЕ
     // должен проваливать заявку: резервно уходит запрос в Apps Script (Google
