@@ -314,34 +314,44 @@ export function buildEnhancement(baseHref) {
       'Страница: https://payoplata.ru' + location.pathname,
     ].join('\\n');
 
-    var tg = fetch('https://api.telegram.org/bot' + BOT + '/sendMessage', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({chat_id:CHAT, text:msg, disable_web_page_preview:true})
-    }).then(function(r){return r.ok;}).catch(function(){return false;});
+    var leadPayload = {source:'main', service:sv, contact:cv, page:location.pathname, ts:Date.now()};
+    // Прямая отправка в Telegram — быстрый путь подтверждения. У части клиентов
+    // (особенно из РФ) провайдер блокирует api.telegram.org, поэтому её сбой НЕ
+    // должен проваливать заявку: резервно уходит запрос в Apps Script (Google
+    // доступен), который сам продублирует заявку в Telegram, почту и Sheets.
+    // Таймаут не даёт заблокированному соединению «подвесить» форму.
+    var tgDirect = new Promise(function(resolve){
+      var settled=false, finish=function(v){ if(!settled){ settled=true; resolve(v); } };
+      setTimeout(function(){ finish(false); }, 7000);
+      fetch('https://api.telegram.org/bot' + BOT + '/sendMessage', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({chat_id:CHAT, text:msg, disable_web_page_preview:true})
+      }).then(function(r){ finish(r.ok); }).catch(function(){ finish(false); });
+    });
 
-    var sh = fetch(SHEETS, {
-      method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body: JSON.stringify({source:'main', service:sv, contact:cv, page:location.pathname, ts:Date.now()})
-    }).then(function(){return true;}).catch(function(){return false;});
-
-    Promise.all([tg, sh]).then(function(r){
-      submitting = false;
-      // Успех = доставка в Telegram подтверждена (r[0]). Запрос в Google Sheets
-      // идёт в режиме no-cors — браузер не видит его настоящий результат и он
-      // всегда «успешен», поэтому по нему нельзя судить о доставке и нельзя
-      // засчитывать цель Метрики. Sheets остаётся резервной записью.
-      if (r[0]) {
-        markSent(key);
-        showSent();
-        // Метрика — цель "заявка на сервис" (+ legacy main_order). Guarded so
-        // the form never breaks if ym failed to load.
-        try{ if(typeof ym==='function'){ ym(109522965,'reachGoal','zayavka_service'); ym(109522965,'reachGoal','main_order'); } }catch(e){}
-      } else {
-        err.textContent = 'Не удалось отправить. Напишите в Telegram: @Kimzar_A';
-        err.hidden = false;
-        btn.disabled = false;
-        btn.textContent = 'Оплатить';
-      }
+    tgDirect.then(function(tgSent){
+      leadPayload.tgSent = tgSent;
+      fetch(SHEETS, {
+        method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body: JSON.stringify(leadPayload)
+      }).then(function(){return true;}).catch(function(){return false;}).then(function(reached){
+        submitting = false;
+        // Успех, если Telegram подтвердил доставку ИЛИ заявка ушла в Apps Script
+        // (Google доступен из РФ; скрипт продублирует её в Telegram и на почту).
+        // Иначе — реальная ошибка сети, показываем сообщение.
+        if (tgSent || reached) {
+          markSent(key);
+          showSent();
+          // Метрика — цель "заявка на сервис" (+ legacy main_order). Guarded so
+          // the form never breaks if ym failed to load.
+          try{ if(typeof ym==='function'){ ym(109522965,'reachGoal','zayavka_service'); ym(109522965,'reachGoal','main_order'); } }catch(e){}
+        } else {
+          err.textContent = 'Не удалось отправить. Напишите в Telegram: @Kimzar_A';
+          err.hidden = false;
+          btn.disabled = false;
+          btn.textContent = 'Оплатить';
+        }
+      });
     });
   });
 
