@@ -401,27 +401,40 @@ export function buildPricingUiPatch() {
         'Контакт: '+contactLine,
         'Страница: https://payoplata.ru'+location.pathname
       ].join('\\n');
-      var tg=fetch('https://api.telegram.org/bot'+BOT+'/sendMessage',{
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({chat_id:CHAT, text:msg, disable_web_page_preview:true})
-      }).then(function(r){return r.ok;}).catch(function(){return false;});
-      var sh=fetch(SHEETS,{
-        method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain;charset=utf-8'},
-        body: JSON.stringify({source:'tariff', service:s.name, tier:tierName, price:priceText, contact:contactLine, page:location.pathname, ts:Date.now()})
-      }).then(function(){return true;}).catch(function(){return false;});
-      Promise.all([tg,sh]).then(function(r){
-        submitting=false;
-        // Успех считаем только по подтверждённой доставке в Telegram (r[0]).
-        // Sheets идёт через no-cors — его результат не виден и всегда «истина»,
-        // поэтому им нельзя подтверждать доставку и засчитывать цель Метрики.
-        if(r[0]){
-          markSent(dedupKey);
-          showCheckoutOk();
-          try{ if(typeof ym==='function'){ ym(109522965,'reachGoal','tariff_order'); ym(109522965,'reachGoal','zayavka_service'); } }catch(e){}
-        } else {
-          err.textContent='Не удалось отправить. Напишите в Telegram: @Kimzar_A'; err.style.display='block';
-          if(submitBtn){ submitBtn.disabled=false; submitBtn.textContent='Продолжить к оплате'; }
-        }
+      var leadPayload={source:'tariff', service:s.name, tier:tierName, price:priceText, contact:contactLine, page:location.pathname, ts:Date.now()};
+      // Прямая отправка в Telegram — быстрый путь подтверждения. У части
+      // клиентов (особенно из РФ) провайдер блокирует api.telegram.org,
+      // поэтому её сбой НЕ должен проваливать заявку: резервно уходит запрос
+      // в Apps Script (Google доступен), который сам продублирует заявку в
+      // Telegram, почту и Sheets. Таймаут не даёт заблокированному соединению
+      // «подвесить» форму.
+      var tgDirect=new Promise(function(resolve){
+        var settled=false, finish=function(v){ if(!settled){ settled=true; resolve(v); } };
+        setTimeout(function(){ finish(false); }, 7000);
+        fetch('https://api.telegram.org/bot'+BOT+'/sendMessage',{
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({chat_id:CHAT, text:msg, disable_web_page_preview:true})
+        }).then(function(r){ finish(r.ok); }).catch(function(){ finish(false); });
+      });
+      tgDirect.then(function(tgSent){
+        leadPayload.tgSent=tgSent;
+        fetch(SHEETS,{
+          method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain;charset=utf-8'},
+          body: JSON.stringify(leadPayload)
+        }).then(function(){return true;}).catch(function(){return false;}).then(function(reached){
+          submitting=false;
+          // Успех, если Telegram подтвердил доставку ИЛИ заявка ушла в Apps
+          // Script (Google доступен из РФ; скрипт продублирует её в Telegram и
+          // на почту). Иначе — реальная ошибка сети, показываем сообщение.
+          if(tgSent || reached){
+            markSent(dedupKey);
+            showCheckoutOk();
+            try{ if(typeof ym==='function'){ ym(109522965,'reachGoal','tariff_order'); ym(109522965,'reachGoal','zayavka_service'); } }catch(e){}
+          } else {
+            err.textContent='Не удалось отправить. Напишите в Telegram: @Kimzar_A'; err.style.display='block';
+            if(submitBtn){ submitBtn.disabled=false; submitBtn.textContent='Продолжить к оплате'; }
+          }
+        });
       });
     });
   }
