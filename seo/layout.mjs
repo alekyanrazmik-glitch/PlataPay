@@ -224,31 +224,42 @@ ${faqLd}
     var CHAT='523060537';
     var SHEETS='https://script.google.com/macros/s/AKfycbyy43Ff5kKivrUsaXWEkda7JXNwHrOI-3BJIJp3UG9H8K6cb4DxjpC8eXNPGNEXQEWt/exec';
 
-    var tg = fetch('https://api.telegram.org/bot'+BOT+'/sendMessage', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({chat_id:CHAT, text:msg, disable_web_page_preview:true})
-    }).then(function(r){return r.ok;}).catch(function(){return false;});
+    var leadPayload = {source:'seo', page:page, service:service, intent:intent, tier:tier, contact:contact, ts:Date.now()};
+    // Прямая отправка в Telegram — быстрый путь подтверждения. У части клиентов
+    // (особенно из РФ) провайдер блокирует api.telegram.org, поэтому её сбой НЕ
+    // должен проваливать заявку: резервно уходит запрос в Apps Script (Google
+    // доступен), который сам продублирует заявку в Telegram, почту и Sheets.
+    // Таймаут не даёт заблокированному соединению «подвесить» форму.
+    var tgDirect = new Promise(function(resolve){
+      var settled=false, finish=function(v){ if(!settled){ settled=true; resolve(v); } };
+      setTimeout(function(){ finish(false); }, 7000);
+      fetch('https://api.telegram.org/bot'+BOT+'/sendMessage', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({chat_id:CHAT, text:msg, disable_web_page_preview:true})
+      }).then(function(r){ finish(r.ok); }).catch(function(){ finish(false); });
+    });
 
-    var sheet = fetch(SHEETS, {
-      method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body: JSON.stringify({source:'seo', page:page, service:service, intent:intent, tier:tier, contact:contact, ts:Date.now()})
-    }).then(function(){return true;}).catch(function(){return false;});
-
-    Promise.all([tg, sheet]).then(function(res){
-      // Успех и цель Метрики — только по подтверждённой доставке в Telegram
-      // (res[0]). Sheets через no-cors всегда «успешен» для браузера, поэтому
-      // им нельзя подтверждать доставку. Остаётся резервной записью.
-      if (res[0]) {
-        card.innerHTML = '<div class="ok"><h3>Заявка принята</h3><p>Свяжемся в течение 5–15 минут по указанному контакту. Если срочно — напишите в Telegram: <a href="https://t.me/Kimzar_A" target="_blank" rel="noopener">@Kimzar_A</a>.</p></div>';
-        // zayavka_service — единая цель «доставленная заявка» для всех форм;
-        // seo_order — сегментация «пришло с SEO-страницы».
-        if (window.ym) { window.ym(109522965, 'reachGoal', 'zayavka_service'); window.ym(109522965, 'reachGoal', 'seo_order'); }
-      } else {
-        err.textContent = 'Не удалось отправить. Напишите нам в Telegram: @Kimzar_A';
-        err.hidden = false;
-        btn.disabled = false;
-        btn.textContent = 'Оплатить';
-      }
+    tgDirect.then(function(tgSent){
+      leadPayload.tgSent = tgSent;
+      fetch(SHEETS, {
+        method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body: JSON.stringify(leadPayload)
+      }).then(function(){return true;}).catch(function(){return false;}).then(function(reached){
+        // Успех, если Telegram подтвердил доставку ИЛИ заявка ушла в Apps Script
+        // (Google доступен из РФ; скрипт продублирует её в Telegram и на почту).
+        // Иначе — реальная ошибка сети, показываем сообщение.
+        if (tgSent || reached) {
+          card.innerHTML = '<div class="ok"><h3>Заявка принята</h3><p>Свяжемся в течение 5–15 минут по указанному контакту. Если срочно — напишите в Telegram: <a href="https://t.me/Kimzar_A" target="_blank" rel="noopener">@Kimzar_A</a>.</p></div>';
+          // zayavka_service — единая цель «доставленная заявка» для всех форм;
+          // seo_order — сегментация «пришло с SEO-страницы».
+          if (window.ym) { window.ym(109522965, 'reachGoal', 'zayavka_service'); window.ym(109522965, 'reachGoal', 'seo_order'); }
+        } else {
+          err.textContent = 'Не удалось отправить. Напишите нам в Telegram: @Kimzar_A';
+          err.hidden = false;
+          btn.disabled = false;
+          btn.textContent = 'Оплатить';
+        }
+      });
     });
     return false;
   };
