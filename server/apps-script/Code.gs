@@ -1,61 +1,61 @@
 /**
- * PlataPay — дубль заявок на почту и в Telegram (Google Apps Script).
+ * PlataPay - dubl zayavok na pochtu i v Telegram (Google Apps Script).
  *
- * Сайт и раньше отправлял данные заявки в этот веб-скрипт для записи в Google
- * Sheets. Теперь скрипт вдобавок шлёт копию заявки на почту и — при
- * необходимости — дублирует её в Telegram.
+ * Sayt i ranshe otpravlyal dannye zayavki v etot veb-skript dlya zapisi v Google
+ * Sheets. Teper skript vdobavok shlet kopiyu zayavki na pochtu i - pri
+ * neobhodimosti - dubliruet ee v Telegram.
  *
- * Зачем дублировать Telegram здесь: у части клиентов (особенно из РФ)
- * провайдер блокирует api.telegram.org, поэтому прямая отправка из браузера
- * не проходит и заявка «терялась» (клиент видел «Не удалось отправить»).
- * Google-серверам Telegram доступен, поэтому этот скрипт гарантированно
- * доносит заявку. Браузер в поле tgSent сообщает, удалось ли ему отправить
- * напрямую: если да — скрипт Telegram не дублирует, чтобы не приходило два
- * одинаковых сообщения; если нет — отправляет сам.
+ * Zachem dublirovat Telegram zdes: u chasti klientov (osobenno iz RF)
+ * provayder blokiruet api.telegram.org, poetomu pryamaya otpravka iz brauzera
+ * ne prohodit i zayavka "teryalas" (klient videl "Ne udalos otpravit").
+ * Google-serveram Telegram dostupen, poetomu etot skript garantirovanno
+ * donosit zayavku. Brauzer v pole tgSent soobschaet, udalos li emu otpravit
+ * napryamuyu: esli da - skript Telegram ne dubliruet, chtoby ne prihodilo dva
+ * odinakovyh soobscheniya; esli net - otpravlyaet sam.
  *
- * Что делает doPost на каждую заявку:
- *   1. пишет строку в Google Sheets (вкладка «Заявки», создаётся сама);
- *   2. отправляет копию заявки письмом на LEAD_EMAIL;
- *   3. дублирует заявку в Telegram, если браузер не отправил её сам (tgSent).
+ * Chto delaet doPost na kazhduyu zayavku:
+ *   1. pishet stroku v Google Sheets (vkladka "Zayavki", sozdaetsya sama);
+ *   2. otpravlyaet kopiyu zayavki pismom na LEAD_EMAIL;
+ *   3. dubliruet zayavku v Telegram, esli brauzer ne otpravil ee sam (tgSent).
  *
- * ─── УСТАНОВКА (один раз) ────────────────────────────────────────────────
- * 1. Откройте ваш Apps Script (в таблице: Расширения → Apps Script).
- * 2. Замените весь код этим файлом.
- * 3. Проверьте BOT_TOKEN и CHAT_ID ниже (те же, что на сайте).
- * 4. Deploy → Manage deployments → откройте текущий деплой на редактирование (✎)
- *    → Version: New version → Deploy.  Оставьте Execute as: Me,
- *    Who has access: Anyone.  URL /exec останется прежним — на сайте менять
- *    ничего не нужно.
- * 5. При первом запуске Google попросит разрешить доступ (к таблице, почте и
- *    внешним запросам) — разрешите. Письма уходят с того Google-аккаунта,
- *    под которым скрипт.
+ * ??? USTANOVKA (odin raz) ????????????????????????????????????????????????
+ * 1. Otkroyte vash Apps Script (v tablice: Rasshireniya -> Apps Script).
+ * 2. Zamenite ves kod etim faylom.
+ * 3. Proverte BOT_TOKEN i CHAT_ID nizhe (te zhe, chto na sayte).
+ * 4. Deploy -> Manage deployments -> otkroyte tekuschiy deploy na redaktirovanie ()
+ *    -> Version: New version -> Deploy.  Ostavte Execute as: Me,
+ *    Who has access: Anyone.  URL /exec ostanetsya prezhnim - na sayte menyat
+ *    nichego ne nuzhno.
+ * 5. Pri pervom zapuske Google poprosit razreshit dostup (k tablice, pochte i
+ *    vneshnim zaprosam) - razreshite. Pisma uhodyat s togo Google-akkaunta,
+ *    pod kotorym skript.
  */
 
-// Секреты читаем из Script Properties (Project Settings → Script Properties),
-// чтобы не держать их в публичном репозитории. Фолбэк на прежние значения
-// оставлен, чтобы после замены кода всё продолжало работать без настройки.
+// Sekrety chitaem iz Script Properties (Project Settings -> Script Properties),
+// chtoby ne derzhat ih v publichnom repozitorii. Folbek na prezhnie znacheniya
+// ostavlen, chtoby posle zameny koda vse prodolzhalo rabotat bez nastroyki.
 //
-// ВАЖНО перед Production (F1): текущий токен уже публичен (лежал в репозитории и
-// в клиентском JS) — отзовите его у @BotFather (/revoke), выпустите новый,
-// положите в Script Property BOT_TOKEN и удалите фолбэк-строку ниже.
+// VAZhNO pered Production (F1): tekuschiy token uzhe publichen (lezhal v repozitorii i
+// v klientskom JS) - otzovite ego u @BotFather (/revoke), vypustite novyy,
+// polozhite v Script Property BOT_TOKEN i udalite folbek-stroku nizhe.
 var _PROPS = PropertiesService.getScriptProperties();
 function _prop_(k, fallback) {
   var v = _PROPS.getProperty(k);
   return (v === null || v === '') ? fallback : v;
 }
 
-// Куда дублировать заявки на почту (можно указать несколько через запятую).
+// Kuda dublirovat zayavki na pochtu (mozhno ukazat neskolko cherez zapyatuyu).
 var LEAD_EMAIL = _prop_('LEAD_EMAIL', 'alekyan.razmik@gmail.com');
 
-// Telegram-бот для резервной доставки заявок (когда браузер клиента не смог
-// достучаться до api.telegram.org сам).
+// Telegram-bot dlya rezervnoy dostavki zayavok (kogda brauzer klienta ne smog
+// dostuchatsya do api.telegram.org sam).
 var BOT_TOKEN = _prop_('BOT_TOKEN', '8842294846:AAGU2BA3RNFSWugpwKlFbnS9ucMluKzP4pg');
 var CHAT_ID = _prop_('CHAT_ID', '523060537');
 
 var COLUMNS = [
-  'Дата', 'Тип', 'Сервис', 'Тариф/План', 'Сумма', 'Имя', 'Телефон',
-  'Способ связи', 'Контакт', 'Назначение', 'Реквизиты', 'Срок',
-  'Файл', 'Комментарий', 'Страница', 'Интент'
+  '\u0414\u0430\u0442\u0430', '\u0422\u0438\u043f', '\u0421\u0435\u0440\u0432\u0438\u0441', '\u0422\u0430\u0440\u0438\u0444/\u041f\u043b\u0430\u043d', '\u0421\u0443\u043c\u043c\u0430', '\u0418\u043c\u044f', '\u0422\u0435\u043b\u0435\u0444\u043e\u043d',
+  '\u0421\u043f\u043e\u0441\u043e\u0431 \u0441\u0432\u044f\u0437\u0438', '\u041a\u043e\u043d\u0442\u0430\u043a\u0442', '\u041d\u0430\u0437\u043d\u0430\u0447\u0435\u043d\u0438\u0435', '\u0420\u0435\u043a\u0432\u0438\u0437\u0438\u0442\u044b', '\u0421\u0440\u043e\u043a',
+  '\u0424\u0430\u0439\u043b', '\u041a\u043e\u043c\u043c\u0435\u043d\u0442\u0430\u0440\u0438\u0439', '\u0421\u0442\u0440\u0430\u043d\u0438\u0446\u0430', '\u0418\u043d\u0442\u0435\u043d\u0442'
 ];
 
 function doPost(e) {
@@ -65,17 +65,17 @@ function doPost(e) {
       ? JSON.parse(e.postData.contents) : {};
     if (!data || typeof data !== 'object') data = {};
 
-    // Honeypot (F2): скрытое поле, которое заполняют только боты. Тихо
-    // подтверждаем и выходим — ничего не пишем и не рассылаем.
+    // Honeypot (F2): skrytoe pole, kotoroe zapolnyayut tolko boty. Tiho
+    // podtverzhdaem i vyhodim - nichego ne pishem i ne rassylaem.
     if (data.company) return json({ ok: true });
 
-    // Мягкий предохранитель от флуда (F2): при всплеске мы ПРОДОЛЖАЕМ писать
-    // заявку в таблицу (это дёшево и не теряет лид), но пропускаем рассылку в
-    // почту/Telegram, чтобы не выжечь суточную квоту MailApp атакой.
+    // Myagkiy predohranitel ot fluda (F2): pri vspleske my PRODOLZhAEM pisat
+    // zayavku v tablicu (eto deshevo i ne teryaet lid), no propuskaem rassylku v
+    // pochtu/Telegram, chtoby ne vyzhech sutochnuyu kvotu MailApp atakoy.
     var throttled = isFlooding_();
 
-    // Отзыв с сайта — отдельная ветка: пишем во вкладку «Отзывы» (на
-    // модерации), уведомляем на почту и в Telegram. В «Заявки» не пишем.
+    // Otzyv s sayta - otdelnaya vetka: pishem vo vkladku "Otzyvy" (na
+    // moderacii), uvedomlyaem na pochtu i v Telegram. V "Zayavki" ne pishem.
     if (data.type === 'review') {
       try { out.sheet = appendReview(data); } catch (se) { out.sheetError = String(se); }
       if (throttled) { out.throttled = true; return json(out); }
@@ -87,7 +87,7 @@ function doPost(e) {
     try { out.sheet = appendRow(data); } catch (se) { out.sheetError = String(se); }
     if (throttled) { out.throttled = true; return json(out); }
     try { out.email = sendEmailCopy(data); } catch (me) { out.emailError = String(me); }
-    // Дублируем в Telegram, только если браузер не смог отправить сам.
+    // Dubliruem v Telegram, tolko esli brauzer ne smog otpravit sam.
     try {
       if (!data.tgSent) out.telegram = sendTelegram(data);
     } catch (te) { out.telegramError = String(te); }
@@ -99,9 +99,9 @@ function doPost(e) {
 }
 
 // GET:
-//   • /exec                       → health check {ok:true,...}
-//   • /exec?reviews=1             → JSON одобренных отзывов
-//   • /exec?reviews=1&callback=fn → то же, но JSONP (для страницы /reviews/)
+//   ? /exec                       -> health check {ok:true,...}
+//   ? /exec?reviews=1             -> JSON odobrennyh otzyvov
+//   ? /exec?reviews=1&callback=fn -> to zhe, no JSONP (dlya stranicy /reviews/)
 function doGet(e) {
   var p = (e && e.parameter) || {};
   if (p.reviews) {
@@ -118,14 +118,14 @@ function appendRow(d) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   if (!ss) return false;
 
-  // F4: сериализуем запись, иначе две одновременные заявки могут обе войти в
-  // ветку создания листа (вторая упадёт «sheet already exists» → лид потерян).
+  // F4: serializuem zapis, inache dve odnovremennye zayavki mogut obe voyti v
+  // vetku sozdaniya lista (vtoraya upadet "sheet already exists" -> lid poteryan).
   var lock = LockService.getScriptLock();
-  try { lock.waitLock(15000); } catch (e) { /* не взяли лок — пишем best-effort */ }
+  try { lock.waitLock(15000); } catch (e) { /* ne vzyali lok - pishem best-effort */ }
   try {
-    var sheet = ss.getSheetByName('Заявки');
+    var sheet = ss.getSheetByName('\u0417\u0430\u044f\u0432\u043a\u0438');
     if (!sheet) {
-      sheet = ss.insertSheet('Заявки');
+      sheet = ss.insertSheet('\u0417\u0430\u044f\u0432\u043a\u0438');
       sheet.appendRow(COLUMNS);
     } else if (sheet.getLastRow() === 0) {
       sheet.appendRow(COLUMNS);
@@ -166,11 +166,11 @@ function sendEmailCopy(d) {
   if (!LEAD_EMAIL || !d || typeof d !== 'object') return false;
 
   var labels = {
-    type: 'Тип', source: 'Тип', service: 'Сервис', tier: 'Тариф', plan: 'Тариф/План',
-    price: 'Сумма', amount: 'Сумма', currency: 'Валюта', name: 'Имя', phone: 'Телефон',
-    channel: 'Способ связи', contact: 'Контакт', purpose: 'Назначение', bank: 'Реквизиты',
-    deadline: 'Срок', file: 'Файл', note: 'Комментарий', page: 'Страница', host: 'Сайт',
-    intent: 'Интент'
+    type: '\u0422\u0438\u043f', source: '\u0422\u0438\u043f', service: '\u0421\u0435\u0440\u0432\u0438\u0441', tier: '\u0422\u0430\u0440\u0438\u0444', plan: '\u0422\u0430\u0440\u0438\u0444/\u041f\u043b\u0430\u043d',
+    price: '\u0421\u0443\u043c\u043c\u0430', amount: '\u0421\u0443\u043c\u043c\u0430', currency: '\u0412\u0430\u043b\u044e\u0442\u0430', name: '\u0418\u043c\u044f', phone: '\u0422\u0435\u043b\u0435\u0444\u043e\u043d',
+    channel: '\u0421\u043f\u043e\u0441\u043e\u0431 \u0441\u0432\u044f\u0437\u0438', contact: '\u041a\u043e\u043d\u0442\u0430\u043a\u0442', purpose: '\u041d\u0430\u0437\u043d\u0430\u0447\u0435\u043d\u0438\u0435', bank: '\u0420\u0435\u043a\u0432\u0438\u0437\u0438\u0442\u044b',
+    deadline: '\u0421\u0440\u043e\u043a', file: '\u0424\u0430\u0439\u043b', note: '\u041a\u043e\u043c\u043c\u0435\u043d\u0442\u0430\u0440\u0438\u0439', page: '\u0421\u0442\u0440\u0430\u043d\u0438\u0446\u0430', host: '\u0421\u0430\u0439\u0442',
+    intent: '\u0418\u043d\u0442\u0435\u043d\u0442'
   };
   var order = ['type', 'source', 'service', 'tier', 'plan', 'price', 'amount', 'currency',
     'name', 'phone', 'channel', 'contact', 'purpose', 'bank', 'deadline', 'file', 'note',
@@ -186,28 +186,28 @@ function sendEmailCopy(d) {
   if (!lines.length) lines.push(JSON.stringify(d));
 
   var tag = d.type || d.service || d.source || '';
-  var subject = 'Заявка с сайта PlataPay' + (tag ? ' — ' + tag : '');
-  MailApp.sendEmail(LEAD_EMAIL, subject, lines.join('\n'), { name: 'PlataPay сайт' });
+  var subject = '\u0417\u0430\u044f\u0432\u043a\u0430 \u0441 \u0441\u0430\u0439\u0442\u0430 PlataPay' + (tag ? ' \u2014 ' + tag : '');
+  MailApp.sendEmail(LEAD_EMAIL, subject, lines.join('\n'), { name: 'PlataPay \u0441\u0430\u0439\u0442' });
   return true;
 }
 
-// Резервная доставка заявки в Telegram силами Google-сервера (когда прямая
-// отправка из браузера клиента не прошла — например, провайдер в РФ блокирует
-// api.telegram.org). Возвращает true при успешной доставке.
+// Rezervnaya dostavka zayavki v Telegram silami Google-servera (kogda pryamaya
+// otpravka iz brauzera klienta ne proshla - naprimer, provayder v RF blokiruet
+// api.telegram.org). Vozvraschaet true pri uspeshnoy dostavke.
 function sendTelegram(d) {
   if (!BOT_TOKEN || !CHAT_ID || !d || typeof d !== 'object') return false;
 
   var labels = {
-    type: 'Тип', source: 'Тип', service: 'Сервис', tier: 'Тариф', plan: 'Тариф/План',
-    price: 'Сумма', amount: 'Сумма', currency: 'Валюта', name: 'Имя', phone: 'Телефон',
-    channel: 'Способ связи', contact: 'Контакт', purpose: 'Назначение', bank: 'Реквизиты',
-    deadline: 'Срок', file: 'Файл', note: 'Комментарий', intent: 'Интент'
+    type: '\u0422\u0438\u043f', source: '\u0422\u0438\u043f', service: '\u0421\u0435\u0440\u0432\u0438\u0441', tier: '\u0422\u0430\u0440\u0438\u0444', plan: '\u0422\u0430\u0440\u0438\u0444/\u041f\u043b\u0430\u043d',
+    price: '\u0421\u0443\u043c\u043c\u0430', amount: '\u0421\u0443\u043c\u043c\u0430', currency: '\u0412\u0430\u043b\u044e\u0442\u0430', name: '\u0418\u043c\u044f', phone: '\u0422\u0435\u043b\u0435\u0444\u043e\u043d',
+    channel: '\u0421\u043f\u043e\u0441\u043e\u0431 \u0441\u0432\u044f\u0437\u0438', contact: '\u041a\u043e\u043d\u0442\u0430\u043a\u0442', purpose: '\u041d\u0430\u0437\u043d\u0430\u0447\u0435\u043d\u0438\u0435', bank: '\u0420\u0435\u043a\u0432\u0438\u0437\u0438\u0442\u044b',
+    deadline: '\u0421\u0440\u043e\u043a', file: '\u0424\u0430\u0439\u043b', note: '\u041a\u043e\u043c\u043c\u0435\u043d\u0442\u0430\u0440\u0438\u0439', intent: '\u0418\u043d\u0442\u0435\u043d\u0442'
   };
   var order = ['type', 'source', 'service', 'tier', 'plan', 'price', 'amount', 'currency',
     'name', 'phone', 'channel', 'contact', 'purpose', 'bank', 'deadline', 'file', 'note',
     'intent'];
 
-  var lines = ['Заявка с сайта PlataPay'];
+  var lines = ['\u0417\u0430\u044f\u0432\u043a\u0430 \u0441 \u0441\u0430\u0439\u0442\u0430 PlataPay'];
   for (var i = 0; i < order.length; i++) {
     var k = order[i];
     if (d[k] !== undefined && d[k] !== null && d[k] !== '' && labels[k]) {
@@ -216,7 +216,7 @@ function sendTelegram(d) {
   }
   var page = d.page || d.host;
   if (page) {
-    lines.push('Страница: ' + (String(page).indexOf('http') === 0
+    lines.push('\u0421\u0442\u0440\u0430\u043d\u0438\u0446\u0430: ' + (String(page).indexOf('http') === 0
       ? page : 'https://payoplata.ru' + page));
   }
 
@@ -233,15 +233,15 @@ function sendTelegram(d) {
   return resp.getResponseCode() === 200;
 }
 
-// ─────────────────────────── ОТЗЫВЫ ────────────────────────────────────
-// Вкладка «Отзывы». Колонки:
-//   Дата | Имя | Оценка | Отзыв | Показывать | Страница
-// «Показывать» — модерация: отзыв появляется на сайте (/reviews/) только
-// когда в этой колонке стоит «да» (также подходят yes/true/1/✓/x/да).
-var REVIEW_SHEET = 'Отзывы';
-var REVIEW_COLUMNS = ['Дата', 'Имя', 'Оценка', 'Отзыв', 'Показывать', 'Страница'];
-var RU_MONTHS = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
-  'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+// ??????????????????????????? OTZYVY ????????????????????????????????????
+// Vkladka "Otzyvy". Kolonki:
+//   Data | Imya | Ocenka | Otzyv | Pokazyvat | Stranica
+// "Pokazyvat" - moderaciya: otzyv poyavlyaetsya na sayte (/reviews/) tolko
+// kogda v etoy kolonke stoit "da" (takzhe podhodyat yes/true/1/v/x/da).
+var REVIEW_SHEET = '\u041e\u0442\u0437\u044b\u0432\u044b';
+var REVIEW_COLUMNS = ['\u0414\u0430\u0442\u0430', '\u0418\u043c\u044f', '\u041e\u0446\u0435\u043d\u043a\u0430', '\u041e\u0442\u0437\u044b\u0432', '\u041f\u043e\u043a\u0430\u0437\u044b\u0432\u0430\u0442\u044c', '\u0421\u0442\u0440\u0430\u043d\u0438\u0446\u0430'];
+var RU_MONTHS = ['\u044f\u043d\u0432\u0430\u0440\u044f', '\u0444\u0435\u0432\u0440\u0430\u043b\u044f', '\u043c\u0430\u0440\u0442\u0430', '\u0430\u043f\u0440\u0435\u043b\u044f', '\u043c\u0430\u044f', '\u0438\u044e\u043d\u044f',
+  '\u0438\u044e\u043b\u044f', '\u0430\u0432\u0433\u0443\u0441\u0442\u0430', '\u0441\u0435\u043d\u0442\u044f\u0431\u0440\u044f', '\u043e\u043a\u0442\u044f\u0431\u0440\u044f', '\u043d\u043e\u044f\u0431\u0440\u044f', '\u0434\u0435\u043a\u0430\u0431\u0440\u044f'];
 
 function reviewSheet_() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -268,7 +268,7 @@ function appendReview(d) {
   var text = String(d.text || '').slice(0, 1000);
   if (!name || !text) return false;
 
-  // F4: та же сериализация, что и для заявок (создание вкладки + запись).
+  // F4: ta zhe serializaciya, chto i dlya zayavok (sozdanie vkladki + zapis).
   var lock = LockService.getScriptLock();
   try { lock.waitLock(15000); } catch (e) { /* best-effort */ }
   try {
@@ -279,7 +279,7 @@ function appendReview(d) {
       safeCell_(name),
       clampStars_(d.stars),
       safeCell_(text),
-      '',                              // Показывать — пусто = на модерации
+      '',                              // Pokazyvat - pusto = na moderacii
       safeCell_(String(d.page || d.host || ''))
     ]);
     return true;
@@ -290,8 +290,8 @@ function appendReview(d) {
 
 function isApproved_(v) {
   var s = String(v == null ? '' : v).trim().toLowerCase();
-  return s === 'да' || s === 'yes' || s === 'true' || s === '1'
-    || s === '✓' || s === 'x' || s === 'х' || s === '+';
+  return s === '\u0434\u0430' || s === 'yes' || s === 'true' || s === '1'
+    || s === '\u2713' || s === 'x' || s === '\u0445' || s === '+';
 }
 
 function ruDate_(d) {
@@ -302,10 +302,10 @@ function ruDate_(d) {
   } catch (e) { return ''; }
 }
 
-// Возвращает одобренные отзывы, свежие сверху.
-// F6: результат кэшируется на 5 минут — публичный doGet иначе читал бы весь
-// лист на каждую загрузку /reviews/. Одобренный отзыв появляется на сайте в
-// течение ~5 минут (для модерации приемлемо).
+// Vozvraschaet odobrennye otzyvy, svezhie sverhu.
+// F6: rezultat keshiruetsya na 5 minut - publichnyy doGet inache chital by ves
+// list na kazhduyu zagruzku /reviews/. Odobrennyy otzyv poyavlyaetsya na sayte v
+// techenie ~5 minut (dlya moderacii priemlemo).
 function getApprovedReviews() {
   var cache = CacheService.getScriptCache();
   var hit = cache.get('approved_reviews');
@@ -319,7 +319,7 @@ function getApprovedReviews() {
   var out = [];
   for (var i = 0; i < rows.length; i++) {
     var r = rows[i];
-    if (!isApproved_(r[4])) continue;          // колонка «Показывать»
+    if (!isApproved_(r[4])) continue;          // kolonka "Pokazyvat"
     var name = String(r[1] || '').trim();
     var text = String(r[3] || '').trim();
     if (!name || !text) continue;
@@ -330,7 +330,7 @@ function getApprovedReviews() {
       date: ruDate_(r[0])
     });
   }
-  out.reverse();                                 // новые сверху
+  out.reverse();                                 // novye sverhu
   try { cache.put('approved_reviews', JSON.stringify(out), 300); } catch (e) {}
   return out;
 }
@@ -338,27 +338,27 @@ function getApprovedReviews() {
 function sendReviewEmail(d) {
   if (!LEAD_EMAIL || !d) return false;
   var body = [
-    'Новый отзыв с сайта PlataPay (на модерации).',
+    '\u041d\u043e\u0432\u044b\u0439 \u043e\u0442\u0437\u044b\u0432 \u0441 \u0441\u0430\u0439\u0442\u0430 PlataPay (\u043d\u0430 \u043c\u043e\u0434\u0435\u0440\u0430\u0446\u0438\u0438).',
     '',
-    'Имя: ' + (d.name || ''),
-    'Оценка: ' + clampStars_(d.stars) + '/5',
-    'Отзыв: ' + (d.text || ''),
-    'Страница: ' + (d.page || ''),
+    '\u0418\u043c\u044f: ' + (d.name || ''),
+    '\u041e\u0446\u0435\u043d\u043a\u0430: ' + clampStars_(d.stars) + '/5',
+    '\u041e\u0442\u0437\u044b\u0432: ' + (d.text || ''),
+    '\u0421\u0442\u0440\u0430\u043d\u0438\u0446\u0430: ' + (d.page || ''),
     '',
-    'Чтобы опубликовать — поставьте «да» в колонке «Показывать» на вкладке «Отзывы».'
+    '\u0427\u0442\u043e\u0431\u044b \u043e\u043f\u0443\u0431\u043b\u0438\u043a\u043e\u0432\u0430\u0442\u044c \u2014 \u043f\u043e\u0441\u0442\u0430\u0432\u044c\u0442\u0435 \u00ab\u0434\u0430\u00bb \u0432 \u043a\u043e\u043b\u043e\u043d\u043a\u0435 \u00ab\u041f\u043e\u043a\u0430\u0437\u044b\u0432\u0430\u0442\u044c\u00bb \u043d\u0430 \u0432\u043a\u043b\u0430\u0434\u043a\u0435 \u00ab\u041e\u0442\u0437\u044b\u0432\u044b\u00bb.'
   ].join('\n');
-  MailApp.sendEmail(LEAD_EMAIL, 'Новый отзыв на сайте PlataPay', body, { name: 'PlataPay сайт' });
+  MailApp.sendEmail(LEAD_EMAIL, '\u041d\u043e\u0432\u044b\u0439 \u043e\u0442\u0437\u044b\u0432 \u043d\u0430 \u0441\u0430\u0439\u0442\u0435 PlataPay', body, { name: 'PlataPay \u0441\u0430\u0439\u0442' });
   return true;
 }
 
 function sendReviewTelegram(d) {
   if (!BOT_TOKEN || !CHAT_ID || !d) return false;
   var text = [
-    'Новый отзыв на сайте PlataPay (на модерации)',
-    'Имя: ' + (d.name || ''),
-    'Оценка: ' + clampStars_(d.stars) + '/5',
-    'Отзыв: ' + (d.text || ''),
-    'Опубликовать: поставьте «да» в колонке «Показывать» (вкладка «Отзывы»).'
+    '\u041d\u043e\u0432\u044b\u0439 \u043e\u0442\u0437\u044b\u0432 \u043d\u0430 \u0441\u0430\u0439\u0442\u0435 PlataPay (\u043d\u0430 \u043c\u043e\u0434\u0435\u0440\u0430\u0446\u0438\u0438)',
+    '\u0418\u043c\u044f: ' + (d.name || ''),
+    '\u041e\u0446\u0435\u043d\u043a\u0430: ' + clampStars_(d.stars) + '/5',
+    '\u041e\u0442\u0437\u044b\u0432: ' + (d.text || ''),
+    '\u041e\u043f\u0443\u0431\u043b\u0438\u043a\u043e\u0432\u0430\u0442\u044c: \u043f\u043e\u0441\u0442\u0430\u0432\u044c\u0442\u0435 \u00ab\u0434\u0430\u00bb \u0432 \u043a\u043e\u043b\u043e\u043d\u043a\u0435 \u00ab\u041f\u043e\u043a\u0430\u0437\u044b\u0432\u0430\u0442\u044c\u00bb (\u0432\u043a\u043b\u0430\u0434\u043a\u0430 \u00ab\u041e\u0442\u0437\u044b\u0432\u044b\u00bb).'
   ].join('\n');
   var resp = UrlFetchApp.fetch('https://api.telegram.org/bot' + BOT_TOKEN + '/sendMessage', {
     method: 'post',
@@ -369,31 +369,31 @@ function sendReviewTelegram(d) {
   return resp.getResponseCode() === 200;
 }
 
-// F3: нейтрализует значения, которые Google Sheets мог бы исполнить как
-// формулу (=, +, -, @, tab, CR). Апостроф Sheets скрывает при отображении,
-// поэтому владелец видит исходный текст, но формула не выполнится. Числа и
-// даты (не строки) возвращаются как есть — тип и формат не меняются.
+// F3: neytralizuet znacheniya, kotorye Google Sheets mog by ispolnit kak
+// formulu (=, +, -, @, tab, CR). Apostrof Sheets skryvaet pri otobrazhenii,
+// poetomu vladelec vidit ishodnyy tekst, no formula ne vypolnitsya. Chisla i
+// daty (ne stroki) vozvraschayutsya kak est - tip i format ne menyayutsya.
 function safeCell_(v) {
   if (v === null || v === undefined) return '';
   if (typeof v !== 'string') return v;
   return /^[=+\-@\t\r]/.test(v) ? "'" + v : v;
 }
 
-// F2: приблизительный глобальный лимит запросов ~45/мин на весь сайт.
-// Ключ привязан к минутному окну по стенным часам (rl_<минута>), поэтому TTL
-// не «продлевается» на каждом запросе и счётчик каждую минуту стартует заново
-// (иначе под непрерывным трафиком он накапливался бы и навсегда «залипал»,
-// глуша уведомления). Взятие/запись не атомарны — это осознанно «мягкий»
-// лимит. Порог можно поднять при росте легитимного трафика.
+// F2: priblizitelnyy globalnyy limit zaprosov ~45/min na ves sayt.
+// Klyuch privyazan k minutnomu oknu po stennym chasam (rl_<minuta>), poetomu TTL
+// ne "prodlevaetsya" na kazhdom zaprose i schetchik kazhduyu minutu startuet zanovo
+// (inache pod nepreryvnym trafikom on nakaplivalsya by i navsegda "zalipal",
+// glusha uvedomleniya). Vzyatie/zapis ne atomarny - eto osoznanno "myagkiy"
+// limit. Porog mozhno podnyat pri roste legitimnogo trafika.
 function isFlooding_() {
   try {
     var c = CacheService.getScriptCache();
     var key = 'rl_' + Math.floor(Date.now() / 60000);
     var n = parseInt(c.get(key) || '0', 10) + 1;
-    c.put(key, String(n), 120);                  // окно живёт ~2 мин и само истекает
-    return n > 45;                               // ~45 запросов/мин на весь сайт
+    c.put(key, String(n), 120);                  // okno zhivet ~2 min i samo istekaet
+    return n > 45;                               // ~45 zaprosov/min na ves sayt
   } catch (e) {
-    return false;                                // кэш недоступен — не мешаем заявке
+    return false;                                // kesh nedostupen - ne meshaem zayavke
   }
 }
 
@@ -403,8 +403,8 @@ function json(obj) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-// JSONP — страница /reviews/ грузит одобренные отзывы через <script>, потому
-// что Apps Script не отдаёт CORS-заголовки для обычного fetch.
+// JSONP - stranica /reviews/ gruzit odobrennye otzyvy cherez <script>, potomu
+// chto Apps Script ne otdaet CORS-zagolovki dlya obychnogo fetch.
 function jsonp(callback, obj) {
   var safe = String(callback).replace(/[^a-zA-Z0-9_$.]/g, '');
   return ContentService
