@@ -31,13 +31,26 @@
  *    под которым скрипт.
  */
 
+// Секреты читаем из Script Properties (Project Settings → Script Properties),
+// чтобы не держать их в публичном репозитории. Фолбэк на прежние значения
+// оставлен, чтобы после замены кода всё продолжало работать без настройки.
+//
+// ВАЖНО перед Production (F1): текущий токен уже публичен (лежал в репозитории и
+// в клиентском JS) — отзовите его у @BotFather (/revoke), выпустите новый,
+// положите в Script Property BOT_TOKEN и удалите фолбэк-строку ниже.
+var _PROPS = PropertiesService.getScriptProperties();
+function _prop_(k, fallback) {
+  var v = _PROPS.getProperty(k);
+  return (v === null || v === '') ? fallback : v;
+}
+
 // Куда дублировать заявки на почту (можно указать несколько через запятую).
-var LEAD_EMAIL = 'alekyan.razmik@gmail.com';
+var LEAD_EMAIL = _prop_('LEAD_EMAIL', 'alekyan.razmik@gmail.com');
 
 // Telegram-бот для резервной доставки заявок (когда браузер клиента не смог
-// достучаться до api.telegram.org сам). Те же значения, что зашиты на сайте.
-var BOT_TOKEN = '8842294846:AAGU2BA3RNFSWugpwKlFbnS9ucMluKzP4pg';
-var CHAT_ID = '523060537';
+// достучаться до api.telegram.org сам).
+var BOT_TOKEN = _prop_('BOT_TOKEN', '8842294846:AAGU2BA3RNFSWugpwKlFbnS9ucMluKzP4pg');
+var CHAT_ID = _prop_('CHAT_ID', '523060537');
 
 var COLUMNS = [
   'Дата', 'Тип', 'Сервис', 'Тариф/План', 'Сумма', 'Имя', 'Телефон',
@@ -50,23 +63,36 @@ function doPost(e) {
   try {
     var data = (e && e.postData && e.postData.contents)
       ? JSON.parse(e.postData.contents) : {};
+    if (!data || typeof data !== 'object') data = {};
+
+    // Honeypot (F2): скрытое поле, которое заполняют только боты. Тихо
+    // подтверждаем и выходим — ничего не пишем и не рассылаем.
+    if (data.company) return json({ ok: true });
+
+    // Мягкий предохранитель от флуда (F2): при всплеске мы ПРОДОЛЖАЕМ писать
+    // заявку в таблицу (это дёшево и не теряет лид), но пропускаем рассылку в
+    // почту/Telegram, чтобы не выжечь суточную квоту MailApp атакой.
+    var throttled = isFlooding_();
 
     // Отзыв с сайта — отдельная ветка: пишем во вкладку «Отзывы» (на
     // модерации), уведомляем на почту и в Telegram. В «Заявки» не пишем.
-    if (data && data.type === 'review') {
+    if (data.type === 'review') {
       try { out.sheet = appendReview(data); } catch (se) { out.sheetError = String(se); }
+      if (throttled) { out.throttled = true; return json(out); }
       try { out.email = sendReviewEmail(data); } catch (me) { out.emailError = String(me); }
       try { if (!data.tgSent) out.telegram = sendReviewTelegram(data); } catch (te) { out.telegramError = String(te); }
       return json(out);
     }
 
     try { out.sheet = appendRow(data); } catch (se) { out.sheetError = String(se); }
+    if (throttled) { out.throttled = true; return json(out); }
     try { out.email = sendEmailCopy(data); } catch (me) { out.emailError = String(me); }
     // Дублируем в Telegram, только если браузер не смог отправить сам.
     try {
       if (!data.tgSent) out.telegram = sendTelegram(data);
     } catch (te) { out.telegramError = String(te); }
   } catch (err) {
+    out.ok = false;
     out.error = String(err);
   }
   return json(out);
@@ -92,40 +118,48 @@ function appendRow(d) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   if (!ss) return false;
 
-  var sheet = ss.getSheetByName('Заявки');
-  if (!sheet) {
-    sheet = ss.insertSheet('Заявки');
-    sheet.appendRow(COLUMNS);
-  } else if (sheet.getLastRow() === 0) {
-    sheet.appendRow(COLUMNS);
-  }
-
-  var pick = function () {
-    for (var i = 0; i < arguments.length; i++) {
-      var v = d[arguments[i]];
-      if (v !== undefined && v !== null && v !== '') return v;
+  // F4: сериализуем запись, иначе две одновременные заявки могут обе войти в
+  // ветку создания листа (вторая упадёт «sheet already exists» → лид потерян).
+  var lock = LockService.getScriptLock();
+  try { lock.waitLock(15000); } catch (e) { /* не взяли лок — пишем best-effort */ }
+  try {
+    var sheet = ss.getSheetByName('Заявки');
+    if (!sheet) {
+      sheet = ss.insertSheet('Заявки');
+      sheet.appendRow(COLUMNS);
+    } else if (sheet.getLastRow() === 0) {
+      sheet.appendRow(COLUMNS);
     }
-    return '';
-  };
-  sheet.appendRow([
-    new Date(),
-    pick('type', 'source'),
-    pick('service'),
-    pick('tier', 'plan'),
-    pick('price', 'amount'),
-    pick('name'),
-    pick('phone'),
-    pick('channel'),
-    pick('contact'),
-    pick('purpose'),
-    pick('bank'),
-    pick('deadline'),
-    pick('file'),
-    pick('note'),
-    pick('page', 'host'),
-    pick('intent')
-  ]);
-  return true;
+
+    var pick = function () {
+      for (var i = 0; i < arguments.length; i++) {
+        var v = d[arguments[i]];
+        if (v !== undefined && v !== null && v !== '') return v;
+      }
+      return '';
+    };
+    sheet.appendRow([
+      new Date(),
+      safeCell_(pick('type', 'source')),
+      safeCell_(pick('service')),
+      safeCell_(pick('tier', 'plan')),
+      safeCell_(pick('price', 'amount')),
+      safeCell_(pick('name')),
+      safeCell_(pick('phone')),
+      safeCell_(pick('channel')),
+      safeCell_(pick('contact')),
+      safeCell_(pick('purpose')),
+      safeCell_(pick('bank')),
+      safeCell_(pick('deadline')),
+      safeCell_(pick('file')),
+      safeCell_(pick('note')),
+      safeCell_(pick('page', 'host')),
+      safeCell_(pick('intent'))
+    ]);
+    return true;
+  } finally {
+    try { lock.releaseLock(); } catch (e) {}
+  }
 }
 
 function sendEmailCopy(d) {
@@ -230,20 +264,28 @@ function clampStars_(v) {
 
 function appendReview(d) {
   if (!d || typeof d !== 'object') return false;
-  var sheet = reviewSheet_();
-  if (!sheet) return false;
   var name = String(d.name || '').slice(0, 60);
   var text = String(d.text || '').slice(0, 1000);
   if (!name || !text) return false;
-  sheet.appendRow([
-    new Date(),
-    name,
-    clampStars_(d.stars),
-    text,
-    '',                              // Показывать — пусто = на модерации
-    d.page || d.host || ''
-  ]);
-  return true;
+
+  // F4: та же сериализация, что и для заявок (создание вкладки + запись).
+  var lock = LockService.getScriptLock();
+  try { lock.waitLock(15000); } catch (e) { /* best-effort */ }
+  try {
+    var sheet = reviewSheet_();
+    if (!sheet) return false;
+    sheet.appendRow([
+      new Date(),
+      safeCell_(name),
+      clampStars_(d.stars),
+      safeCell_(text),
+      '',                              // Показывать — пусто = на модерации
+      safeCell_(String(d.page || d.host || ''))
+    ]);
+    return true;
+  } finally {
+    try { lock.releaseLock(); } catch (e) {}
+  }
 }
 
 function isApproved_(v) {
@@ -261,7 +303,14 @@ function ruDate_(d) {
 }
 
 // Возвращает одобренные отзывы, свежие сверху.
+// F6: результат кэшируется на 5 минут — публичный doGet иначе читал бы весь
+// лист на каждую загрузку /reviews/. Одобренный отзыв появляется на сайте в
+// течение ~5 минут (для модерации приемлемо).
 function getApprovedReviews() {
+  var cache = CacheService.getScriptCache();
+  var hit = cache.get('approved_reviews');
+  if (hit) { try { return JSON.parse(hit); } catch (e) {} }
+
   var sheet = reviewSheet_();
   if (!sheet) return [];
   var last = sheet.getLastRow();
@@ -281,7 +330,9 @@ function getApprovedReviews() {
       date: ruDate_(r[0])
     });
   }
-  return out.reverse();                          // новые сверху
+  out.reverse();                                 // новые сверху
+  try { cache.put('approved_reviews', JSON.stringify(out), 300); } catch (e) {}
+  return out;
 }
 
 function sendReviewEmail(d) {
@@ -316,6 +367,34 @@ function sendReviewTelegram(d) {
     muteHttpExceptions: true
   });
   return resp.getResponseCode() === 200;
+}
+
+// F3: нейтрализует значения, которые Google Sheets мог бы исполнить как
+// формулу (=, +, -, @, tab, CR). Апостроф Sheets скрывает при отображении,
+// поэтому владелец видит исходный текст, но формула не выполнится. Числа и
+// даты (не строки) возвращаются как есть — тип и формат не меняются.
+function safeCell_(v) {
+  if (v === null || v === undefined) return '';
+  if (typeof v !== 'string') return v;
+  return /^[=+\-@\t\r]/.test(v) ? "'" + v : v;
+}
+
+// F2: приблизительный глобальный лимит запросов ~45/мин на весь сайт.
+// Ключ привязан к минутному окну по стенным часам (rl_<минута>), поэтому TTL
+// не «продлевается» на каждом запросе и счётчик каждую минуту стартует заново
+// (иначе под непрерывным трафиком он накапливался бы и навсегда «залипал»,
+// глуша уведомления). Взятие/запись не атомарны — это осознанно «мягкий»
+// лимит. Порог можно поднять при росте легитимного трафика.
+function isFlooding_() {
+  try {
+    var c = CacheService.getScriptCache();
+    var key = 'rl_' + Math.floor(Date.now() / 60000);
+    var n = parseInt(c.get(key) || '0', 10) + 1;
+    c.put(key, String(n), 120);                  // окно живёт ~2 мин и само истекает
+    return n > 45;                               // ~45 запросов/мин на весь сайт
+  } catch (e) {
+    return false;                                // кэш недоступен — не мешаем заявке
+  }
 }
 
 function json(obj) {
