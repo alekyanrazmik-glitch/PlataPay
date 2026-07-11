@@ -20,6 +20,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { buildEnhancement } from './seo/enhance.mjs';
 import { buildPricingUiPatch } from './seo/pricing-ui.mjs';
+import { renderReviewsPage } from './seo/reviews-page.mjs';
 import { patchStaticPrices } from './seo/static-pricing-patch.mjs';
 import { SERVICES as CAT_SERVICES, CATEGORIES as CAT_CATEGORIES } from './seo/data.mjs';
 
@@ -410,6 +411,19 @@ function patchCatalogSearch(html) {
   return html;
 }
 
+// Home reviews block: add an entry point to the dedicated /reviews/ page
+// (where visitors can read every review and leave their own). Keeps the
+// existing "Смотреть все отзывы" → Avito link untouched. No-op off the
+// home page (only it carries #ppRevList).
+function patchHomeReviewsLink(html) {
+  if (!html.includes('id="ppRevList"')) return html;
+  const cta = `<div class="pp-rev-list" id="ppRevList"></div> <a class="pp-rf-all" href="reviews/" style="margin-top:16px;justify-content:center;border:1px solid #1d3a6b;border-radius:12px;padding:12px;">Читать все отзывы и оставить свой <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 6l6 6-6 6"/></svg></a>`;
+  return html.replace(
+    '<div class="pp-rev-list" id="ppRevList"></div>',
+    () => cta,
+  );
+}
+
 function patchPage(html, isHome) {
   // 1) Nav links: rewrite absolute SPA-style paths to relative paths
   //    that combine with <base href> correctly. Done BEFORE the base
@@ -448,6 +462,9 @@ function patchPage(html, isHome) {
 
   // 3.6) Cosmetic catalog skin aligned with the new home page.
   html = patchCatalogSkin(html);
+
+  // 3.7) Link the home reviews block to the dedicated /reviews/ page.
+  html = patchHomeReviewsLink(html);
 
   // 4) Replace hardcoded card prices with calculated prices before the page is written.
   html = patchStaticPrices(html);
@@ -591,12 +608,20 @@ fs.mkdirSync(path.join(OUT, 'seo'), { recursive: true });
 fs.writeFileSync(path.join(OUT, 'seo', 'index.html'), hub);
 seoUrls.push('https://payoplata.ru/seo/');
 
+// Dedicated reviews page: /reviews/. Shows seed + approved visitor reviews
+// and carries the "leave a review" form.
+const reviewsHtml = renderReviewsPage({ base: BASE_HREF, verifyTags: verifyTags() });
+fs.mkdirSync(path.join(OUT, 'reviews'), { recursive: true });
+fs.writeFileSync(path.join(OUT, 'reviews', 'index.html'), reviewsHtml);
+console.log('built reviews/index.html');
+
 // Rewrite sitemap.xml so search engines actually find the new pages.
 const baseUrls = [
   'https://payoplata.ru/',
   'https://payoplata.ru/catalog/',
   'https://payoplata.ru/faq/',
   'https://payoplata.ru/contacts/',
+  'https://payoplata.ru/reviews/',
 ];
 const today = new Date().toISOString().slice(0, 10);
 const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
