@@ -179,6 +179,33 @@ ${serviceLd}
     .wrap{padding:14px;}
     .block{padding:15px;}
   }
+  /* Sticky "pay now" bar — a fast path to the order form for visitors
+     who don't want to read. Fixed to the bottom of the viewport (where a
+     thumb sits on mobile); slides out of the way once the order form
+     itself is on screen so it never covers the thing it points at. */
+  .pp-sticky-cta{position:fixed;left:0;right:0;bottom:0;z-index:50;
+    padding:10px 16px calc(10px + env(safe-area-inset-bottom));
+    background:rgba(8,23,47,.92);backdrop-filter:blur(12px);
+    border-top:1px solid #1d3a6b;box-shadow:0 -10px 30px -14px rgba(0,0,0,.7);
+    transform:translateY(0);opacity:1;
+    transition:transform .28s ease,opacity .28s ease;}
+  .pp-sticky-cta.pp-hide{transform:translateY(130%);opacity:0;pointer-events:none;}
+  .pp-sticky-inner{max-width:980px;margin:0 auto;display:flex;align-items:center;
+    gap:14px;justify-content:space-between;}
+  .pp-sticky-text{display:flex;flex-direction:column;line-height:1.25;min-width:0;}
+  .pp-sticky-text b{font-size:15px;color:#eef3ff;font-weight:600;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .pp-sticky-text span{font-size:12px;color:#9fb2d4;white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis;}
+  .pp-sticky-btn{flex:none;background:linear-gradient(180deg,#2e7bff,#1e5fd6);
+    color:#fff;font-weight:600;font-size:15px;padding:0 26px;border-radius:999px;
+    box-shadow:0 8px 24px -8px rgba(46,123,255,.7);min-height:48px;
+    display:inline-flex;align-items:center;gap:6px;}
+  .pp-sticky-btn:hover{color:#fff;filter:brightness(1.08);}
+  @media (max-width:420px){
+    .pp-sticky-text span{display:none;}
+    .pp-sticky-btn{padding:0 20px;}
+  }
 </style>
 ${faqLd}
 <!-- Yandex.Metrika counter -->
@@ -276,7 +303,7 @@ ${faqLd}
       <a href="${base}faq/">FAQ</a>
       <a href="${base}contacts/">Контакты</a>
     </nav>
-    <a class="cta-btn" href="${base}#popupforma">Оплатить сервис</a>
+    <a class="cta-btn" href="#zakaz">Оплатить ${escapeAttr(service.name)}</a>
   </div>
 </header>
 
@@ -365,6 +392,40 @@ ${faqLd}
   </div>
 </footer>
 <script>window.PP_PAGE_SERVICE=${JSON.stringify(service.slug)};</script>
+
+<!-- Sticky "pay now" bar: one tap from anywhere on the page straight to
+     the order form. For visitors who came from an ad and just want to pay. -->
+<div class="pp-sticky-cta" id="pp-sticky">
+  <div class="pp-sticky-inner">
+    <div class="pp-sticky-text">
+      <b>Оплатить ${escapeAttr(service.name)}</b>
+      <span>Ответим за 5–15 минут · без данных вашей карты</span>
+    </div>
+    <a class="pp-sticky-btn" href="#zakaz" id="pp-sticky-btn">Оплатить →</a>
+  </div>
+</div>
+<script>
+(function(){
+  var bar=document.getElementById('pp-sticky');
+  var form=document.getElementById('zakaz');
+  if(!bar||!form) return;
+  document.getElementById('pp-sticky-btn').addEventListener('click',function(e){
+    e.preventDefault();
+    form.scrollIntoView({behavior:'smooth',block:'center'});
+    var input=document.getElementById('pp-contact');
+    if(input){ setTimeout(function(){ try{ input.focus({preventScroll:true}); }catch(_){ input.focus(); } },520); }
+    if(window.ym){ window.ym(109522965,'reachGoal','sticky_cta_click'); }
+  });
+  // Slide the bar away while the order form is on screen — no point
+  // covering the form you're pointing people to (Airbnb-style behaviour).
+  if('IntersectionObserver' in window){
+    var io=new IntersectionObserver(function(entries){
+      entries.forEach(function(en){ bar.classList.toggle('pp-hide', en.isIntersecting); });
+    },{threshold:0.25});
+    io.observe(form);
+  }
+})();
+</script>
 ${pricingUi}
 </body>
 </html>`;
