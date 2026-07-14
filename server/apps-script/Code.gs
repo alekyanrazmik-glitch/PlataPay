@@ -397,6 +397,47 @@ function isFlooding_() {
   }
 }
 
+// ??? SAMOPROVERKA DOSTAVKI (zapustite vruchnuyu iz redaktora) ???????????
+// Zachem: zayavka pishetsya v Google Sheets, no NE prihodit ni na pochtu, ni v
+// Telegram - eto klassicheskiy priznak, chto skript ne poluchil razreshenie na
+// otpravku pochty (MailApp) i vneshnie zaprosy (UrlFetchApp), libo opublikovana
+// staraya versiya. Etot test razom i vydaet zapros na razreshenie, i pokazyvaet,
+// chto imenno lomaetsya.
+//
+// KAK ZAPUSTIT:
+//   1. V redaktore Apps Script sverhu vyberite funkciyu "pp_selftest".
+//   2. Nazhmite Run (Zapustit).
+//   3. Pri pervom zapuske Google poprosit razreshit dostup - razreshite VSE
+//      (tablica, otpravka pochty ot vashego imeni, podklyuchenie k vneshnim
+//      servisam). Bez etogo pochta i Telegram rabotat ne budut.
+//   4. Posmotrite rezultat: na pochtu LEAD_EMAIL i v Telegram CHAT_ID dolzhno
+//      priyti soobschenie "PlataPay selftest". Podrobnosti - v View -> Logs.
+//
+// Rezultat (vozvraschaemyy obekt i log):
+//   email:true / telegram:true   - dostavka rabotaet. Ostalos tolko OPUBLIKOVAT
+//                                   novuyu versiyu: Deploy -> Manage deployments
+//                                   -> karandash -> Version: New version -> Deploy.
+//   emailError / telegramError   - tekst oshibki (naprimer, net razresheniya ili
+//                                   nevernyy token) - po nemu vidno, chto chinit.
+function pp_selftest() {
+  var probe = {
+    type: 'TEST', service: 'PlataPay selftest', tier: 'proverka dostavki',
+    name: 'selftest', contact: 'pp_selftest', channel: 'Telegram',
+    page: '/selftest', intent: 'selftest'
+  };
+  var res = {
+    mailTo: LEAD_EMAIL,
+    botPrefix: String(BOT_TOKEN).slice(0, 12) + '...',
+    chatId: CHAT_ID,
+    email: null, emailError: null,
+    telegram: null, telegramError: null
+  };
+  try { res.email = sendEmailCopy(probe); } catch (e) { res.emailError = String(e); }
+  try { res.telegram = sendTelegram(probe); } catch (e) { res.telegramError = String(e); }
+  Logger.log(JSON.stringify(res, null, 2));
+  return res;
+}
+
 function json(obj) {
   return ContentService
     .createTextOutput(JSON.stringify(obj))
