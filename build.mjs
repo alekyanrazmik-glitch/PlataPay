@@ -23,6 +23,7 @@ import { buildPricingUiPatch } from './seo/pricing-ui.mjs';
 import { renderReviewsPage } from './seo/reviews-page.mjs';
 import { patchStaticPrices } from './seo/static-pricing-patch.mjs';
 import { SERVICES as CAT_SERVICES, CATEGORIES as CAT_CATEGORIES } from './seo/data.mjs';
+import { APP_CSS, APP_JS } from './seo/app-shell.mjs';
 
 const SRC = 'tilda-original';
 const OUT = 'out';
@@ -229,6 +230,26 @@ fs.mkdirSync(OUT, { recursive: true });
 for (const dir of Object.keys(ASSET_DIRS)) {
   fs.mkdirSync(path.join(OUT, dir), { recursive: true });
 }
+
+// Общие ассеты нового дизайна SEO-страниц: один CSS и один JS на все
+// ~100k страниц (инлайн при таком количестве страниц невозможен).
+fs.writeFileSync(path.join(OUT, 'css', 'pp-app.css'), APP_CSS);
+fs.writeFileSync(path.join(OUT, 'js', 'pp-app.js'), APP_JS);
+
+// Модалка тарифов (pricing-ui) — константные ~83 КБ. На четырёх страницах
+// Тильды остаётся инлайном, а для 900 «богатых» SEO-страниц выносится в
+// общий js/pp-pricing.js: разметка и стили инжектятся из строки, скрипты
+// исполняются после (defer гарантирует, что PP_PAGE_SERVICE уже выставлен).
+const pricingScripts = [...pricingUiPatch.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]);
+const pricingMarkup = pricingUiPatch.replace(/<script>[\s\S]*?<\/script>/g, '');
+const pricingSharedJs = `(function(){
+var w=document.createElement('div');
+w.innerHTML=${JSON.stringify(pricingMarkup)};
+document.body.appendChild(w);
+${pricingScripts.join('\n;\n')}
+})();`;
+fs.writeFileSync(path.join(OUT, 'js', 'pp-pricing.js'), pricingSharedJs);
+const pricingUiRef = `<script src="${BASE_HREF}js/pp-pricing.js" defer></script>`;
 
 const skip = new Set([
   ...PAGES.map((p) => p.src),
@@ -545,7 +566,7 @@ for (const service of SEO_SERVICES) {
   const { intents, renderers } = plan(service);
   for (const intent of intents) {
     const page = renderers[intent.key](service, intents);
-    const html = renderPage({ base: BASE_HREF, page, service, intent, intents, verifyTags: verifyTags(), pricingUi: pricingUiPatch });
+    const html = renderPage({ base: BASE_HREF, page, service, intent, intents, verifyTags: verifyTags(), pricingUi: pricingUiRef });
     const slug = intent.slug(service.slug);
     const dir = path.join(OUT, slug);
     fs.mkdirSync(dir, { recursive: true });
@@ -590,7 +611,7 @@ ${verifyTags()}
 <div class="wrap">
 <a class="home" href="${BASE_HREF}">← На главную</a>
 <h1>Все сервисы и материалы</h1>
-<p class="sub">${SEO_SERVICES.length} сервисов и направлений · ${seoCount} страниц. Выберите сервис и тип материала.</p>
+<p class="sub">${SEO_SERVICES.length} сервисов и направлений · ${seoCount} страниц. Выберите сервис и тип материала. Ищете оплату в своём городе — откройте <a href="${BASE_HREF}gorod/">список городов</a>.</p>
 ${Object.entries(grouped).map(([cat, list]) => `
   <h2>${(CATEGORIES_MAP[cat] && CATEGORIES_MAP[cat].title) || cat}</h2>
   ${list.map((s) => {
@@ -615,7 +636,20 @@ fs.mkdirSync(path.join(OUT, 'reviews'), { recursive: true });
 fs.writeFileSync(path.join(OUT, 'reviews', 'index.html'), reviewsHtml);
 console.log('built reviews/index.html');
 
-// Rewrite sitemap.xml so search engines actually find the new pages.
+// ---------------- Массовый ярус: гео × сервисы, способы оплаты, хабы ----
+// ~100k лёгких страниц в новом дизайне. Управление объёмом:
+// SEO_GEO=0 — пропустить ярус, SEO_GEO_CITIES=N — ограничить города.
+const { generateGeo } = await import('./seo/geo.mjs');
+const geoUrls = generateGeo({
+  out: OUT,
+  base: BASE_HREF,
+  verifyTags: verifyTags(),
+  services: SEO_SERVICES,
+});
+
+// ---------------- Sitemap: индекс + шарды ----------------
+// Лимит формата — 50 000 URL на файл; гео-ярус шардируется по 40 000.
+// robots.txt продолжает указывать на /sitemap.xml — теперь это индекс.
 const baseUrls = [
   'https://payoplata.ru/',
   'https://payoplata.ru/catalog/',
@@ -624,17 +658,41 @@ const baseUrls = [
   'https://payoplata.ru/reviews/',
 ];
 const today = new Date().toISOString().slice(0, 10);
-const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+const SM_DIR = path.join(OUT, 'sitemaps');
+fs.mkdirSync(SM_DIR, { recursive: true });
+
+function writeSitemapShard(name, urls, { rich = false } = {}) {
+  const rows = urls.map((u) =>
+    rich
+      ? `<url><loc>${u}</loc><lastmod>${today}</lastmod><changefreq>weekly</changefreq><priority>${u === 'https://payoplata.ru/' ? '1.0' : '0.6'}</priority></url>`
+      : `<url><loc>${u}</loc><lastmod>${today}</lastmod></url>`,
+  );
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${[...baseUrls, ...seoUrls]
-  .map(
-    (u) => `<url><loc>${u}</loc><lastmod>${today}</lastmod><changefreq>weekly</changefreq><priority>${u === 'https://payoplata.ru/' ? '1.0' : '0.6'}</priority></url>`,
-  )
-  .join('\n')}
+${rows.join('\n')}
 </urlset>
 `;
-fs.writeFileSync(path.join(OUT, 'sitemap.xml'), sitemap);
-console.log(`sitemap.xml: ${baseUrls.length + seoUrls.length} urls`);
+  fs.writeFileSync(path.join(SM_DIR, name), xml);
+  return `https://payoplata.ru/sitemaps/${name}`;
+}
+
+const coreUrls = [...baseUrls, ...seoUrls, ...geoUrls.methods, ...geoUrls.hubs];
+const shardLocs = [writeSitemapShard('core.xml', coreUrls, { rich: true })];
+const GEO_SHARD = 40000;
+for (let i = 0; i < geoUrls.geo.length; i += GEO_SHARD) {
+  shardLocs.push(writeSitemapShard(`geo-${1 + i / GEO_SHARD}.xml`, geoUrls.geo.slice(i, i + GEO_SHARD)));
+}
+
+const sitemapIndex = `<?xml version="1.0" encoding="UTF-8"?>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${shardLocs.map((u) => `<sitemap><loc>${u}</loc><lastmod>${today}</lastmod></sitemap>`).join('\n')}
+</sitemapindex>
+`;
+fs.writeFileSync(path.join(OUT, 'sitemap.xml'), sitemapIndex);
+
+const totalUrls = coreUrls.length + geoUrls.geo.length;
+console.log(`sitemap.xml: index of ${shardLocs.length} shards, ${totalUrls} urls total`);
+console.log(`total pages: ${totalUrls}`);
 
 console.log(`\nDone. base href = ${BASE_HREF}`);
 console.log('Output ready in ./out');
