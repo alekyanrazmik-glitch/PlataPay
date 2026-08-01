@@ -1,8 +1,25 @@
-// Shared page shell for SEO landings — keeps the brand look without
-// pulling in the heavy Tilda chrome, so the pages stay fast and easy
-// for crawlers to parse.
+// Каркас «богатых» SEO-страниц (/oplata-<slug>/, /kak-oplatit-<slug>/ и
+// т.д.) в новом дизайне PlataPay. Контентные блоки по-прежнему приходят
+// из templates.mjs (page.body) — здесь только оболочка: шапка, hero,
+// форма, FAQ, перелинковка, футер.
+//
+// В отличие от старой версии, CSS и JS не инлайнятся: страницы подключают
+// общие css/pp-app.css и js/pp-app.js (см. seo/app-shell.mjs), поэтому
+// каждая страница похудела примерно на 15 КБ.
 
-import { faqBlock, relatedLinks } from './templates.mjs';
+import { relatedLinks } from './templates.mjs';
+import {
+  breadcrumbLd,
+  breadcrumbs,
+  escapeHtml,
+  faqDetails,
+  heroPanel,
+  orderCard,
+  stickyBar,
+  whyCards,
+  wrapPage,
+} from './app-shell.mjs';
+import { geoLinksFor } from './geo.mjs';
 
 export function renderPage({
   base,          // base href, e.g. '/' on custom domain
@@ -14,6 +31,7 @@ export function renderPage({
   pricingUi = '', // branded tariff-card modal + form, injected before </body>
 }) {
   const canonical = `https://payoplata.ru/${intent.slug(service.slug)}/`;
+
   const faqLd = page.faq && page.faq.length
     ? `<script type="application/ld+json">${JSON.stringify({
         '@context': 'https://schema.org',
@@ -26,22 +44,13 @@ export function renderPage({
       })}</script>`
     : '';
 
-  // BreadcrumbList so Главная → Каталог → текущая страница shows up as a
-  // rich result and gives crawlers an explicit hierarchy.
-  const breadcrumbLd = `<script type="application/ld+json">${JSON.stringify({
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
-    itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Главная', item: 'https://payoplata.ru/' },
-      { '@type': 'ListItem', position: 2, name: 'Каталог', item: 'https://payoplata.ru/catalog/' },
-      { '@type': 'ListItem', position: 3, name: page.h1, item: canonical },
-    ],
-  })}</script>`;
+  const crumbLd = breadcrumbLd([
+    { name: 'Главная', item: 'https://payoplata.ru/' },
+    { name: 'Каталог', item: 'https://payoplata.ru/catalog/' },
+    { name: page.h1, item: canonical },
+  ]);
 
-  // Service schema so search engines understand this is a paid service
-  // (not just an article) — provider, area served, and an Offer when we
-  // have a real minimum price (variable-price services like Booking omit it
-  // rather than claim a fake "0 ₽").
+  // Service-схема: провайдер, зона обслуживания и Offer при известной цене.
   const serviceLd = `<script type="application/ld+json">${JSON.stringify({
     '@context': 'https://schema.org',
     '@type': 'Service',
@@ -55,395 +64,58 @@ export function renderPage({
       : {}),
   })}</script>`;
 
-  return `<!doctype html>
-<html lang="ru">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<base href="${base}">
-<title>${page.title}</title>
-<meta name="description" content="${escapeAttr(clampMeta(page.description))}">
-<link rel="canonical" href="${canonical}">
-<link rel="icon" href="${base}favicon.svg" type="image/svg+xml">
-<meta property="og:type" content="article">
-<meta property="og:locale" content="ru_RU">
-<meta property="og:site_name" content="PlataPay">
-<meta property="og:title" content="${escapeAttr(page.title)}">
-<meta property="og:description" content="${escapeAttr(clampMeta(page.description))}">
-<meta property="og:url" content="${canonical}">
-<meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="${escapeAttr(page.title)}">
-<meta name="twitter:description" content="${escapeAttr(clampMeta(page.description))}">
-${verifyTags}
-${breadcrumbLd}
-${serviceLd}
-<style>
-  :root { color-scheme: dark; }
-  *,*::before,*::after{box-sizing:border-box;}
-  html,body{margin:0;background:#08172F;color:#eef3ff;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','Segoe UI',system-ui,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.55;max-width:100%;overflow-x:hidden;}
-  img{max-width:100%;height:auto;}
-  a{color:#7BAEFF;text-decoration:none;}
-  a:hover{color:#eef3ff;}
-  .wrap{max-width:980px;margin:0 auto;padding:24px;}
-  header.site{position:sticky;top:0;z-index:30;background:rgba(8,23,47,0.92);backdrop-filter:blur(10px);border-bottom:1px solid #16315f;}
-  header.site .row{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;max-width:1180px;margin:0 auto;}
-  .logo{font-size:22px;font-weight:600;letter-spacing:-.01em;color:#eef3ff;}
-  .logo span{color:#2e7bff;}
-  nav.top a{color:#9fb2d4;margin:0 10px;font-size:14px;}
-  nav.top a:hover{color:#eef3ff;}
-  .cta-btn{display:inline-flex;align-items:center;gap:6px;padding:10px 18px;border-radius:999px;font-weight:600;font-size:14px;background:linear-gradient(180deg,#2e7bff,#1e5fd6);color:#fff;}
-  .btn-primary{display:inline-flex;align-items:center;gap:6px;padding:14px 24px;border-radius:999px;font-weight:600;font-size:15px;background:linear-gradient(180deg,#2e7bff,#1e5fd6);color:#fff;box-shadow:0 8px 24px -8px rgba(46,123,255,.7);}
-  .btn-primary:hover{filter:brightness(1.08);color:#fff;}
-  .hero{padding:48px 0 24px;}
-  .crumbs{font-size:13px;color:#8499c0;margin-bottom:12px;}
-  .crumbs a{color:#8499c0;}
-  h1{font-size:36px;line-height:1.15;letter-spacing:-.02em;margin:0 0 16px;font-weight:600;}
-  h2{font-size:22px;margin:0 0 12px;font-weight:600;letter-spacing:-.01em;}
-  h3{font-size:17px;margin:0 0 6px;font-weight:600;}
-  p{margin:0 0 12px;color:#cfd9ef;}
-  .lead{font-size:17px;color:#eef3ff;}
-  .block{background:#0c1f40;border:1px solid #16315f;border-radius:18px;padding:22px;margin:0 0 16px;}
-  .block.cta{text-align:center;background:linear-gradient(180deg,#0c1f40,#13294e);}
-  .block.cta h2{font-size:24px;}
-  .hint{font-size:13px;color:#8499c0;margin-top:10px;}
-  /* Trust row under H1 */
-  .trust-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px;}
-  .trust{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:#cfe0ff;background:rgba(46,123,255,.10);border:1px solid rgba(46,123,255,.28);border-radius:999px;padding:7px 12px;backdrop-filter:blur(6px);}
-  /* Advantages + stats (glass) */
-  .adv{margin:8px 0 16px;}
-  .adv-grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));margin-bottom:14px;}
-  .adv-card{background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));border:1px solid #16315f;border-radius:16px;padding:18px;backdrop-filter:blur(8px);}
-  .adv-card h3{color:#eef3ff;margin:8px 0 6px;}
-  .adv-card p{color:#9fb2d4;font-size:14px;margin:0;}
-  .adv-ic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-size:20px;background:linear-gradient(180deg,#2e7bff,#1e5fd6);box-shadow:0 10px 24px -10px rgba(46,123,255,.7);}
-  .stats{display:grid;gap:10px;grid-template-columns:repeat(4,1fr);}
-  .stats>div{background:#0c1f40;border:1px solid #16315f;border-radius:14px;padding:16px;text-align:center;}
-  .stats b{display:block;font-size:22px;color:#eef3ff;letter-spacing:-.01em;}
-  .stats span{display:block;font-size:12px;color:#8499c0;margin-top:4px;}
-  @media (max-width:640px){ .stats{grid-template-columns:1fr 1fr;} }
-  ul,ol{margin:0 0 12px;padding-left:20px;color:#cfd9ef;}
-  ul li,ol li{margin-bottom:6px;}
-  .tiers li, .check li, .steps li{padding:4px 0;}
-  .check{list-style:none;padding:0;}
-  .check li{position:relative;padding-left:24px;}
-  .check li::before{content:"";position:absolute;left:0;top:10px;width:8px;height:8px;border-radius:50%;background:#2e7bff;}
-  .steps{counter-reset:step;list-style:none;padding:0;}
-  .steps li{position:relative;padding-left:36px;margin-bottom:10px;counter-increment:step;}
-  .steps li::before{content:counter(step);position:absolute;left:0;top:0;width:26px;height:26px;border-radius:50%;background:linear-gradient(180deg,#2e7bff,#1e5fd6);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;}
-  .faq{margin-top:24px;}
-  .faq-item{background:#0d1f44;border:1px solid #16315f;border-radius:14px;padding:16px 18px;margin-bottom:10px;}
-  .faq-item h3{color:#eef3ff;margin-bottom:6px;}
-  .faq-item p{color:#9fb2d4;font-size:14px;margin:0;}
-  .rel{margin:32px 0 8px;}
-  .rel-grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));}
-  .rel-card{display:block;padding:14px 16px;background:#0c1f40;border:1px solid #16315f;border-radius:12px;color:#eef3ff;font-size:14px;}
-  .rel-card:hover{border-color:#2e7bff;color:#eef3ff;}
-  footer.site{margin-top:64px;border-top:1px solid #16315f;background:#08172F;}
-  footer.site .row{max-width:1180px;margin:0 auto;padding:28px 24px;display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;color:#8499c0;font-size:13px;}
-  footer.site a{color:#8499c0;margin-left:16px;}
-  footer.site a:hover{color:#eef3ff;}
-  /* mini order form */
-  .order{background:linear-gradient(180deg,#0c1f40,#13294e);border:1px solid #1d3a6b;border-radius:18px;padding:24px;margin:24px 0;}
-  .order h2{margin-bottom:6px;}
-  .order .sub{color:#9fb2d4;font-size:14px;margin-bottom:18px;}
-  .order .row{display:grid;gap:10px;grid-template-columns:1fr 1fr auto;align-items:end;}
-  .order label{display:block;font-size:12px;color:#9fb2d4;margin-bottom:6px;}
-  .order select,.order input{width:100%;background:#08172F;border:1px solid #1d3a6b;color:#eef3ff;border-radius:10px;padding:12px 14px;font-size:15px;font-family:inherit;}
-  .order select:focus,.order input:focus{outline:none;border-color:#2e7bff;}
-  .order button{background:linear-gradient(180deg,#2e7bff,#1e5fd6);color:#fff;border:none;border-radius:10px;padding:13px 22px;font-weight:600;font-size:15px;cursor:pointer;font-family:inherit;white-space:nowrap;}
-  .order button:hover{filter:brightness(1.08);}
-  .order button:disabled{opacity:.6;cursor:wait;}
-  .order .alt{margin-top:14px;font-size:13px;color:#8499c0;}
-  .order .alt a{color:#2e7bff;}
-  .order .err{color:#ff8d8d;margin-top:10px;font-size:13px;}
-  .order .ok{background:#0c1f40;border:1px solid #15A34A;border-radius:14px;padding:24px;text-align:center;}
-  .order .ok h3{color:#22C55E;margin-bottom:8px;}
-  .order .ok p{color:#cfd9ef;margin:0;}
-  /* Accessible tap targets (≥44px) for every interactive control */
-  .btn-primary,.cta-btn,.order button,.order select,.order input,.rel-card{min-height:44px;}
-  @media (max-width:768px){
-    nav.top{display:none;}
-    .block{padding:18px;}
-  }
-  @media (max-width:640px){
-    .wrap{padding:16px;}
-    h1{font-size:26px;}
-    h2{font-size:19px;}
-    .lead{font-size:16px;}
-    .order .row{grid-template-columns:1fr;}
-    .rel-grid{grid-template-columns:1fr;}
-    .crumbs{font-size:12px;}
-  }
-  @media (max-width:380px){
-    h1{font-size:23px;}
-    .wrap{padding:14px;}
-    .block{padding:15px;}
-  }
-  /* Sticky "pay now" bar — a fast path to the order form for visitors
-     who don't want to read. Fixed to the bottom of the viewport (where a
-     thumb sits on mobile); slides out of the way once the order form
-     itself is on screen so it never covers the thing it points at. */
-  .pp-sticky-cta{position:fixed;left:0;right:0;bottom:0;z-index:50;
-    padding:10px 16px calc(10px + env(safe-area-inset-bottom));
-    background:rgba(8,23,47,.92);backdrop-filter:blur(12px);
-    border-top:1px solid #1d3a6b;box-shadow:0 -10px 30px -14px rgba(0,0,0,.7);
-    transform:translateY(0);opacity:1;
-    transition:transform .28s ease,opacity .28s ease;}
-  .pp-sticky-cta.pp-hide{transform:translateY(130%);opacity:0;pointer-events:none;}
-  .pp-sticky-inner{max-width:980px;margin:0 auto;display:flex;align-items:center;
-    gap:14px;justify-content:space-between;}
-  .pp-sticky-text{display:flex;flex-direction:column;line-height:1.25;min-width:0;}
-  .pp-sticky-text b{font-size:15px;color:#eef3ff;font-weight:600;
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .pp-sticky-text span{font-size:12px;color:#9fb2d4;white-space:nowrap;
-    overflow:hidden;text-overflow:ellipsis;}
-  .pp-sticky-btn{flex:none;background:linear-gradient(180deg,#2e7bff,#1e5fd6);
-    color:#fff;font-weight:600;font-size:15px;padding:0 26px;border-radius:999px;
-    box-shadow:0 8px 24px -8px rgba(46,123,255,.7);min-height:48px;
-    display:inline-flex;align-items:center;gap:6px;}
-  .pp-sticky-btn:hover{color:#fff;filter:brightness(1.08);}
-  @media (max-width:420px){
-    .pp-sticky-text span{display:none;}
-    .pp-sticky-btn{padding:0 20px;}
-  }
-</style>
-${faqLd}
-<!-- Yandex.Metrika counter -->
-<script type="text/javascript">
-   (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
-   m[i].l=1*new Date();
-   for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
-   k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})
-   (window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
-   ym(109522965, "init", { clickmap:true, trackLinks:true, accurateTrackBounce:true, webvisor:true });
-</script>
-<noscript><div><img src="https://mc.yandex.ru/watch/109522965" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
-<!-- /Yandex.Metrika counter -->
-<script>
-  // Mini order form: posts to the same Telegram bot + Google Sheets
-  // that the main Tilda forms use. Both requests are fire-and-forget;
-  // the user sees a success screen as long as at least one succeeds.
-  window.ppSubmit = function(ev){
-    ev.preventDefault();
-    var form = ev.target;
-    var card = form.closest('.order');
-    var tier = form.querySelector('#pp-tier').value || '';
-    var contact = form.querySelector('#pp-contact').value.trim();
-    var err = card.querySelector('#pp-err');
-    var btn = form.querySelector('#pp-submit');
-    err.hidden = true;
-    if (contact.length < 4) { err.textContent='Введите контакт (телефон, @username или email)'; err.hidden=false; return false; }
-    btn.disabled = true; btn.textContent = 'Отправляем…';
+  const crumbs = breadcrumbs([
+    { name: 'Главная', href: base },
+    { name: 'Каталог', href: `${base}catalog/` },
+    { name: service.name, href: `${base}oplata-${service.slug}/` },
+    { name: intent.title },
+  ]);
 
-    var service = card.dataset.service;
-    var intent = card.dataset.intent;
-    var page = location.pathname;
-    var msg = [
-      'Заявка с SEO-страницы PlataPay',
-      'Сервис: ' + service,
-      'Тариф: ' + (tier || '—'),
-      'Контакт: ' + contact,
-      'Страница: https://payoplata.ru' + page,
-      'Интент: ' + intent,
-    ].join('\\n');
-
-    var BOT='8842294846:AAGU2BA3RNFSWugpwKlFbnS9ucMluKzP4pg';
-    var CHAT='523060537';
-    var SHEETS='https://script.google.com/macros/s/AKfycbyy43Ff5kKivrUsaXWEkda7JXNwHrOI-3BJIJp3UG9H8K6cb4DxjpC8eXNPGNEXQEWt/exec';
-
-    var leadPayload = {source:'seo', page:page, service:service, intent:intent, tier:tier, contact:contact, ts:Date.now()};
-    // Прямая отправка в Telegram — быстрый путь подтверждения. У части клиентов
-    // (особенно из РФ) провайдер блокирует api.telegram.org, поэтому её сбой НЕ
-    // должен проваливать заявку: резервно уходит запрос в Apps Script (Google
-    // доступен), который сам продублирует заявку в Telegram, почту и Sheets.
-    // Таймаут не даёт заблокированному соединению «подвесить» форму.
-    var tgDirect = new Promise(function(resolve){
-      var settled=false, finish=function(v){ if(!settled){ settled=true; resolve(v); } };
-      setTimeout(function(){ finish(false); }, 7000);
-      fetch('https://api.telegram.org/bot'+BOT+'/sendMessage', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({chat_id:CHAT, text:msg, disable_web_page_preview:true})
-      }).then(function(r){ finish(r.ok); }).catch(function(){ finish(false); });
-    });
-
-    tgDirect.then(function(tgSent){
-      leadPayload.tgSent = tgSent;
-      fetch(SHEETS, {
-        method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain;charset=utf-8'},
-        body: JSON.stringify(leadPayload)
-      }).then(function(){return true;}).catch(function(){return false;}).then(function(reached){
-        // Успех, если Telegram подтвердил доставку ИЛИ заявка ушла в Apps Script
-        // (Google доступен из РФ; скрипт продублирует её в Telegram и на почту).
-        // Иначе — реальная ошибка сети, показываем сообщение.
-        if (tgSent || reached) {
-          card.innerHTML = '<div class="ok"><h3>Заявка принята</h3><p>Свяжемся в течение 5–15 минут по указанному контакту. Если срочно — напишите в Telegram: <a href="https://t.me/Kimzar_A" target="_blank" rel="noopener">@Kimzar_A</a>.</p></div>';
-          // zayavka_service — единая цель «доставленная заявка» для всех форм;
-          // seo_order — сегментация «пришло с SEO-страницы».
-          if (window.ym) { window.ym(109522965, 'reachGoal', 'zayavka_service'); window.ym(109522965, 'reachGoal', 'seo_order'); }
-        } else {
-          err.textContent = 'Не удалось отправить. Напишите нам в Telegram: @Kimzar_A';
-          err.hidden = false;
-          btn.disabled = false;
-          btn.textContent = 'Оплатить';
-        }
-      });
-    });
-    return false;
-  };
-</script>
-</head>
-<body>
-<header class="site">
-  <div class="row">
-    <a class="logo" href="${base}">Plata<span>Pay</span></a>
-    <nav class="top">
-      <a href="${base}">Главная</a>
-      <a href="${base}catalog/">Каталог</a>
-      <a href="https://travel.payoplata.ru" target="_blank" rel="noopener">Авиабилеты</a>
-      <a href="${base}faq/">FAQ</a>
-      <a href="${base}contacts/">Контакты</a>
-    </nav>
-    <a class="cta-btn" href="#zakaz">Оплатить ${escapeAttr(service.name)}</a>
-  </div>
-</header>
-
-<main class="wrap">
-  <div class="hero">
-    <div class="crumbs">
-      <a href="${base}">Главная</a> · <a href="${base}catalog/">Каталог</a> · ${service.name}
-    </div>
-    <h1>${page.h1}</h1>
-    <div class="trust-row">
-      <span class="trust">⚡ Оплата за 5–15 минут</span>
-      <span class="trust">🔒 Без пароля и данных вашей карты</span>
-      <span class="trust">↩️ Вернём деньги, если не вышло</span>
-      <span class="trust">💬 Telegram и WhatsApp</span>
-    </div>
-  </div>
-
-  ${page.body}
-
-  <section class="adv">
-    <h2>Почему оплачивают через PlataPay</h2>
-    <div class="adv-grid">
-      <div class="adv-card"><div class="adv-ic">⚡</div><h3>Быстро</h3><p>Отвечаем за 1–15 минут и оплачиваем в среднем за 5–15 минут после подтверждения суммы.</p></div>
-      <div class="adv-card"><div class="adv-ic">🔒</div><h3>Безопасно</h3><p>Не просим пароль от аккаунта и данные вашей карты. Оплата идёт с нашей зарубежной карты.</p></div>
-      <div class="adv-card"><div class="adv-ic">₽</div><h3>Прозрачно</h3><p>Называем итоговую сумму в рублях до оплаты. Без скрытых комиссий и автосписаний.</p></div>
-      <div class="adv-card"><div class="adv-ic">↩️</div><h3>С гарантией</h3><p>Если оплата не прошла по нашей вине или со стороны сервиса — возвращаем деньги полностью.</p></div>
-    </div>
-    <div class="stats">
-      <div><b>140+</b><span>сервисов и направлений</span></div>
-      <div><b>5–15 мин</b><span>среднее время оплаты</span></div>
-      <div><b>100%</b><span>возврат, если не вышло</span></div>
-      <div><b>24/7</b><span>поддержка в мессенджерах</span></div>
-    </div>
-  </section>
-
-  <section class="order" id="zakaz" data-service="${escapeAttr(service.name)}" data-intent="${intent.key}">
-    <h2>Оплатить ${service.name}</h2>
-    <p class="sub">Оставьте контакт — ответим в течение 5–15 минут и подтвердим сумму.</p>
-    <form class="row" onsubmit="return ppSubmit(event)">
-      <div>
-        <label for="pp-tier">Тариф</label>
-        <select id="pp-tier" name="tier">
-          ${
-            (service.tiers || []).length
-              ? `<option value="">Любой / уточнить</option>` +
-                service.tiers.map((t) => `<option>${escapeAttr(t)}</option>`).join('')
-              : `<option value="">Уточним при ответе</option>`
-          }
-        </select>
-      </div>
-      <div>
-        <label for="pp-contact">Телефон, Telegram или email</label>
-        <input id="pp-contact" name="contact" type="text" inputmode="text" placeholder="+7 999 123-45-67 или @username" required autocomplete="off">
-      </div>
-      <button type="submit" id="pp-submit">Оплатить</button>
-    </form>
-    <div class="alt">
-      Или сразу напишите:
-      <a href="https://t.me/Kimzar_A?text=${encodeURIComponent('Привет! Хочу оплатить ' + service.name)}" target="_blank" rel="noopener">Telegram</a> ·
-      <a href="https://wa.me/79676726909?text=${encodeURIComponent('Привет! Хочу оплатить ' + service.name)}" target="_blank" rel="noopener">WhatsApp</a>
-    </div>
-    <div class="err" id="pp-err" hidden></div>
-  </section>
-
-  <section class="faq">
-    <h2 style="padding-left:4px;">Частые вопросы</h2>
-    ${faqBlock(page.faq)}
-  </section>
-
-  <section class="rel">
-    <h2 style="padding-left:4px;">Другие материалы про ${service.name}</h2>
-    ${relatedLinks(service, intents, intent.key)}
-  </section>
-</main>
-
-<footer class="site">
-  <div class="row">
-    <div>© ${new Date().getFullYear()} PlataPay · ООО «Аполон7-Рус» · ИНН 2304086282</div>
-    <div>
-      <a href="${base}">Главная</a>
-      <a href="${base}catalog/">Каталог</a>
-      <a href="https://travel.payoplata.ru" target="_blank" rel="noopener">Авиабилеты</a>
-      <a href="${base}faq/">FAQ</a>
-      <a href="${base}contacts/">Контакты</a>
-    </div>
-  </div>
-</footer>
-<script>window.PP_PAGE_SERVICE=${JSON.stringify(service.slug)};</script>
-
-<!-- Sticky "pay now" bar: one tap from anywhere on the page straight to
-     the order form. For visitors who came from an ad and just want to pay. -->
-<div class="pp-sticky-cta" id="pp-sticky">
-  <div class="pp-sticky-inner">
-    <div class="pp-sticky-text">
-      <b>Оплатить ${escapeAttr(service.name)}</b>
-      <span>Ответим за 5–15 минут · без данных вашей карты</span>
-    </div>
-    <a class="pp-sticky-btn" href="#zakaz" id="pp-sticky-btn">Оплатить →</a>
-  </div>
-</div>
-<script>
-(function(){
-  var bar=document.getElementById('pp-sticky');
-  var form=document.getElementById('zakaz');
-  if(!bar||!form) return;
-  document.getElementById('pp-sticky-btn').addEventListener('click',function(e){
-    e.preventDefault();
-    form.scrollIntoView({behavior:'smooth',block:'center'});
-    var input=document.getElementById('pp-contact');
-    if(input){ setTimeout(function(){ try{ input.focus({preventScroll:true}); }catch(_){ input.focus(); } },520); }
-    if(window.ym){ window.ym(109522965,'reachGoal','sticky_cta_click'); }
+  const hero = heroPanel({
+    service,
+    h1: escapeHtml(page.h1),
+    sub: `${escapeHtml(service.hint.charAt(0).toUpperCase() + service.hint.slice(1))}.`,
+    price: service.price,
+    priceNote: 'Итоговая сумма в рублях фиксируется до оплаты · комиссия 5%',
   });
-  // Slide the bar away while the order form is on screen — no point
-  // covering the form you're pointing people to (Airbnb-style behaviour).
-  if('IntersectionObserver' in window){
-    var io=new IntersectionObserver(function(entries){
-      entries.forEach(function(en){ bar.classList.toggle('pp-hide', en.isIntersecting); });
-    },{threshold:0.25});
-    io.observe(form);
-  }
-})();
-</script>
-${pricingUi}
-</body>
-</html>`;
-}
 
-function escapeAttr(s) {
-  return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/"/g, '&quot;')
-    .replace(/</g, '&lt;');
-}
+  const stats = `<div class="pp-stats">
+<div><b class="g">5.0</b><span>рейтинг на Avito</span></div>
+<div><b>5–15 мин</b><span>от заявки до оплаты</span></div>
+<div><b>140+</b><span>сервисов и направлений</span></div>
+<div><b>08–24</b><span>ежедневно, МСК</span></div>
+</div>`;
 
-// Keep meta descriptions within the ~160-char SERP window: trim at the last
-// word boundary before the limit (no mid-word cut, no ellipsis).
-function clampMeta(s, max = 160) {
-  const t = String(s || '').trim();
-  if (t.length <= max) return t;
-  const cut = t.slice(0, max);
-  const sp = cut.lastIndexOf(' ');
-  return (sp > max * 0.6 ? cut.slice(0, sp) : cut).replace(/[\s,;:.—-]+$/, '');
+  const order = orderCard({
+    service,
+    intent: intent.key,
+    title: `Оплатить ${escapeHtml(service.name)}`,
+    sub: 'Оставьте контакт — ответим в течение 5–15 минут и подтвердим сумму.',
+    tiers: service.tiers,
+  });
+
+  const body = `<main class="wrap">
+${crumbs}
+${hero}
+<div style="margin-top:16px">${page.body}</div>
+<section class="pp-sec"><h2>Почему оплачивают через PlataPay</h2>${whyCards()}${stats}</section>
+${order}
+<section class="pp-sec"><h2>Частые вопросы</h2>${faqDetails(page.faq)}</section>
+${geoLinksFor(service, base)}
+<section class="pp-sec"><h2>Другие материалы про ${escapeHtml(service.name)}</h2>${relatedLinks(service, intents, intent.key)}</section>
+</main>
+${stickyBar({ title: `Оплатить ${service.name}` })}`;
+
+  return wrapPage({
+    base,
+    canonical,
+    title: page.title,
+    description: page.description,
+    verifyTags,
+    ld: crumbLd + serviceLd + faqLd,
+    body,
+    footerCompact: false,
+    noscriptPixel: true,
+    extraBodyEnd: `<script>window.PP_PAGE_SERVICE=${JSON.stringify(service.slug)};</script>${pricingUi}`,
+  });
 }

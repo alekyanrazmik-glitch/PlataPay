@@ -53,3 +53,7 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          # ~100k файлов распаковываются на стороне Pages дольше
+          # стандартных 10 минут — даём запас.
+          timeout: 1800000
