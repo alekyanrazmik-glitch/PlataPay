@@ -1,0 +1,50 @@
+# Раздача статических SEO-страниц PlataPay рядом с основным приложением.
+#
+# Принцип: nginx сначала ищет запрошенный путь в статике
+# (/var/www/platapay-seo), и только если файла нет — передаёт запрос
+# приложению. Так 100 000 SEO-страниц живут на том же домене, что и
+# приложение, ничего друг у друга не отбирая: главную, каталог и прочие
+# «живые» страницы статика не содержит (см. APP_OWNED в deploy-seo.sh).
+#
+# КАК ПОДКЛЮЧИТЬ
+# В существующем server { } блоке payoplata.ru:
+#   1) добавьте root и заголовок try_files, как ниже;
+#   2) вынесите текущий proxy_pass приложения в location @app;
+#   3) nginx -t && systemctl reload nginx
+#
+# Проверка после подключения:
+#   curl -I https://payoplata.ru/g/chatgpt/oplata-moskva.html   → 200
+#   curl -I https://payoplata.ru/gorod/                          → 200
+#   curl -I https://payoplata.ru/sitemap.xml                     → 200
+#   главная и каталог по-прежнему отдаются приложением.
+
+server {
+    server_name payoplata.ru www.payoplata.ru;
+    # ... ваши listen/ssl_* директивы без изменений ...
+
+    # Статика SEO-страниц (создаётся скриптом deploy-seo.sh)
+    root /var/www/platapay-seo;
+
+    location / {
+        # 1) точный файл (…/oplata-moskva.html, /css/pp-app.css)
+        # 2) каталог с index.html (/gorod/, /oplata-chatgpt/)
+        # 3) иначе — приложение
+        try_files $uri $uri/index.html @app;
+    }
+
+    # Долгий кэш для общих ассетов SEO-страниц
+    location ~ ^/(css/pp-app\.css|js/pp-(app|pricing)\.js)$ {
+        expires 7d;
+        add_header Cache-Control "public";
+        try_files $uri @app;
+    }
+
+    location @app {
+        # ЗАМЕНИТЕ на реальный адрес/порт вашего приложения
+        proxy_pass http://127.0.0.1:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
