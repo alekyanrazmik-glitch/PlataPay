@@ -20,6 +20,7 @@ import {
   wrapPage,
 } from './app-shell.mjs';
 import { geoLinksFor } from './geo.mjs';
+import { articleLinksFor } from './articles.mjs';
 
 export function renderPage({
   base,          // base href, e.g. '/' on custom domain
@@ -101,6 +102,7 @@ ${hero}
 <section class="pp-sec"><h2>Почему оплачивают через PlataPay</h2>${whyCards()}${stats}</section>
 ${order}
 <section class="pp-sec"><h2>Частые вопросы</h2>${faqDetails(page.faq)}</section>
+${articleLinksFor(service, base)}
 ${geoLinksFor(service, base)}
 <section class="pp-sec"><h2>Другие материалы про ${escapeHtml(service.name)}</h2>${relatedLinks(service, intents, intent.key)}</section>
 </main>
