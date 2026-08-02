@@ -494,9 +494,9 @@ ${breadcrumbs([{ name: 'Главная', href: base }, { name: 'Города' }]
   });
 }
 
-// Включён ли массовый ярус (учитывается и в layout.mjs, чтобы не
-// ссылаться на несуществующие страницы при SEO_GEO=0).
-export const GEO_ENABLED = process.env.SEO_GEO !== '0' && Number(process.env.SEO_GEO_CITIES || 350) > 0;
+// Массовый ярус по умолчанию ВЫКЛЮЧЕН: ставка сделана на качественные
+// статьи (/blog/), а не на гео-клоны. Включение — явное: SEO_GEO=1.
+export const GEO_ENABLED = process.env.SEO_GEO === '1' && Number(process.env.SEO_GEO_CITIES || 350) > 0;
 
 /**
  * Блоки перелинковки для «богатых» страниц (/oplata-<slug>/ и т.п.):
@@ -525,13 +525,12 @@ export function geoLinksFor(service, base) {
  * services — SERVICES из seo/data.mjs (порядок сохраняется).
  */
 export function generateGeo({ out, base, verifyTags, services }) {
-  const enabled = process.env.SEO_GEO !== '0';
   const cityLimit = Number(process.env.SEO_GEO_CITIES || 350);
   const cities = CITIES.slice(0, Math.max(0, cityLimit));
 
   const urls = { geo: [], methods: [], hubs: [] };
-  if (!enabled || cities.length === 0) {
-    console.log('geo tier: skipped (SEO_GEO=0 or no cities)');
+  if (!GEO_ENABLED || cities.length === 0) {
+    console.log('geo tier: skipped (set SEO_GEO=1 to enable)');
     return urls;
   }
 

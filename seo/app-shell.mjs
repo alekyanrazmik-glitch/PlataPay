@@ -358,6 +358,42 @@ a.pp-chip:hover{border-color:var(--brand);color:#fff}
 .pp-sticky .tx span{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pp-sticky .pp-btn{flex:none;height:46px}
 
+/* ── Статьи (/blog/) ── */
+.art{max-width:800px;margin:0 auto}
+.art-head{margin:18px 0 6px}
+.art-rubric{display:inline-block;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--brand-soft);background:rgba(46,123,255,.12);border:1px solid rgba(46,123,255,.25);border-radius:999px;padding:5px 12px}
+.art h1{margin-top:12px}
+.art-meta{color:var(--faint);font-size:13px;margin:2px 0 0}
+.art h2{margin-top:32px}
+.art p{font-size:15.5px;line-height:1.66}
+.art .lead{font-size:17px}
+.art ul.check li{font-size:15px;line-height:1.6;margin-bottom:9px}
+.toc{border:1px solid var(--line);background:var(--panel2);border-radius:16px;padding:14px 18px;margin:18px 0}
+.toc b{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}
+.toc ol{margin:8px 0 0;padding-left:20px}
+.toc li{margin:4px 0;font-size:14px}
+.tbl-wrap{overflow-x:auto;margin:12px 0;border:1px solid var(--line);border-radius:14px;background:var(--panel2)}
+.tbl-wrap table{width:100%;border-collapse:collapse;font-size:14px;min-width:520px}
+.tbl-wrap th,.tbl-wrap td{padding:10px 14px;text-align:left;border-bottom:1px solid var(--line-dim);color:var(--text2)}
+.tbl-wrap th{color:var(--dim);font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;background:var(--deep)}
+.tbl-wrap tr:last-child td{border-bottom:0}
+.tbl-wrap tr.hl td{background:rgba(46,123,255,.08);color:var(--ice)}
+.pc-grid{display:grid;gap:12px;grid-template-columns:1fr 1fr;margin:14px 0}
+.pc{border:1px solid var(--line);background:var(--panel2);border-radius:16px;padding:16px}
+.pc>b{font-size:15px;color:var(--ice)}
+.pc ul{list-style:none;padding:0;margin:10px 0 0}
+.pc li{position:relative;padding-left:22px;font-size:13.5px;color:var(--text2);margin:5px 0;line-height:1.5}
+.pc .plus li::before{content:"+";position:absolute;left:2px;top:0;color:var(--mint);font-weight:700}
+.pc .minus li::before{content:"−";position:absolute;left:2px;top:0;color:var(--sale);font-weight:700}
+.pc .minus{margin-top:6px}
+.alt-card{border:1px solid var(--line);background:var(--panel2);border-radius:18px;padding:18px;margin-top:12px}
+.alt-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px}
+.alt-head h3{margin:0;font-size:17px}
+.alt-n{flex:none;width:26px;height:26px;border-radius:999px;display:grid;place-items:center;background:rgba(46,123,255,.16);color:var(--brand-ice);font-weight:700;font-size:13px}
+.alt-price{margin-left:auto;color:var(--gold);font-weight:700;font-size:15px;white-space:nowrap}
+.hub-count{font-size:12px;color:var(--dim);font-weight:600;background:var(--chip);border-radius:999px;padding:3px 9px;vertical-align:middle;margin-left:6px}
+@media (max-width:700px){.pc-grid{grid-template-columns:1fr}}
+
 /* ── Адаптив ── */
 .pp-btn,.pp-btn-ghost,.pp-order select,.pp-order input,.rel-card,.pp-link,.pp-chip{min-height:44px}
 .pp-chip{min-height:36px}
@@ -491,11 +527,17 @@ ${ctaHtml}
 </div></header>`;
 }
 
+// Гео-ярус (города/способы оплаты) по умолчанию выключен и включается
+// только явным SEO_GEO=1 — ссылки на него появляются в навигации лишь
+// тогда, когда страницы реально собираются.
+export const GEO_ON = process.env.SEO_GEO === '1';
+
 export function defaultNav(base) {
   return [
     { label: 'Каталог', href: `${base}catalog/` },
     { label: 'Все сервисы', href: `${base}seo/` },
-    { label: 'Города', href: `${base}gorod/` },
+    { label: 'Статьи', href: `${base}blog/` },
+    ...(GEO_ON ? [{ label: 'Города', href: `${base}gorod/` }] : []),
     { label: 'Отзывы', href: `${base}reviews/` },
     { label: 'Вопросы', href: `${base}faq/` },
     { label: 'Контакты', href: `${base}contacts/` },
@@ -597,7 +639,7 @@ export function pageFooter({ base, compact = false }) {
     return `<footer class="pp-footer"><div class="inner">
 <div class="pp-legal" style="border-top:0;margin-top:0;padding-top:0">
 <span>${LEGAL_SHORT}</span>
-<span><a href="${base}">Главная</a> · <a href="${base}catalog/">Каталог</a> · <a href="${base}seo/">Все сервисы</a> · <a href="${base}gorod/">Города</a> · <a href="${base}faq/">FAQ</a> · <a href="${base}contacts/">Контакты</a></span>
+<span><a href="${base}">Главная</a> · <a href="${base}catalog/">Каталог</a> · <a href="${base}seo/">Все сервисы</a> · <a href="${base}blog/">Статьи</a>${GEO_ON ? ` · <a href="${base}gorod/">Города</a>` : ''} · <a href="${base}faq/">FAQ</a> · <a href="${base}contacts/">Контакты</a></span>
 </div>
 <p class="pp-note">${DISCLAIMER}</p>
 </div></footer>`;
@@ -610,7 +652,7 @@ export function pageFooter({ base, compact = false }) {
 <div class="pp-fbtns"><a class="pp-fbtn" href="${CONTACTS.telegram}" target="_blank" rel="noopener">Написать в Telegram</a><a class="pp-fbtn o" href="${CONTACTS.whatsapp}" target="_blank" rel="noopener">WhatsApp</a></div>
 </div>
 <div class="pp-fcol"><b>Навигация</b><a href="${base}">Главная</a><a href="${base}catalog/">Каталог</a><a href="${base}reviews/">Отзывы</a><a href="${base}faq/">Вопросы</a><a href="${base}contacts/">Контакты</a></div>
-<div class="pp-fcol"><b>Сервисы</b><a href="${base}seo/">Все сервисы</a><a href="${base}gorod/">Оплата по городам</a><a href="https://travel.payoplata.ru" target="_blank" rel="noopener">Авиабилеты</a><a href="${base}catalog/">Каталог подписок</a></div>
+<div class="pp-fcol"><b>Сервисы</b><a href="${base}seo/">Все сервисы</a><a href="${base}blog/">Статьи и инструкции</a>${GEO_ON ? `<a href="${base}gorod/">Оплата по городам</a>` : ''}<a href="https://travel.payoplata.ru" target="_blank" rel="noopener">Авиабилеты</a><a href="${base}catalog/">Каталог подписок</a></div>
 <div class="pp-fcol"><b>Важно</b><p class="txt">${DISCLAIMER}</p></div>
 </div>
 <div class="pp-legal"><span>${LEGAL}</span></div>

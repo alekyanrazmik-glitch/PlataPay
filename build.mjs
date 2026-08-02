@@ -611,7 +611,7 @@ ${verifyTags()}
 <div class="wrap">
 <a class="home" href="${BASE_HREF}">← На главную</a>
 <h1>Все сервисы и материалы</h1>
-<p class="sub">${SEO_SERVICES.length} сервисов и направлений · ${seoCount} страниц. Выберите сервис и тип материала. Ищете оплату в своём городе — откройте <a href="${BASE_HREF}gorod/">список городов</a>.</p>
+<p class="sub">${SEO_SERVICES.length} сервисов и направлений · ${seoCount} страниц. Выберите сервис и тип материала. Инструкции и разборы — в разделе <a href="${BASE_HREF}blog/">«Статьи»</a>.</p>
 ${Object.entries(grouped).map(([cat, list]) => `
   <h2>${(CATEGORIES_MAP[cat] && CATEGORIES_MAP[cat].title) || cat}</h2>
   ${list.map((s) => {
@@ -636,9 +636,20 @@ fs.mkdirSync(path.join(OUT, 'reviews'), { recursive: true });
 fs.writeFileSync(path.join(OUT, 'reviews', 'index.html'), reviewsHtml);
 console.log('built reviews/index.html');
 
+// ---------------- Статьи: /blog/ — ~520 материалов ----------------
+// Качественный контентный ярус под реальные информационные запросы:
+// «оплата не проходит», «без зарубежной карты», альтернативы, продление,
+// гайды по категориям и покупке игр в Steam.
+const { generateArticles } = await import('./seo/articles.mjs');
+const blogUrls = generateArticles({
+  out: OUT,
+  base: BASE_HREF,
+  verifyTags: verifyTags(),
+  services: SEO_SERVICES,
+});
+
 // ---------------- Массовый ярус: гео × сервисы, способы оплаты, хабы ----
-// ~100k лёгких страниц в новом дизайне. Управление объёмом:
-// SEO_GEO=0 — пропустить ярус, SEO_GEO_CITIES=N — ограничить города.
+// По умолчанию ВЫКЛЮЧЕН (включение: SEO_GEO=1, объём: SEO_GEO_CITIES=N).
 const { generateGeo } = await import('./seo/geo.mjs');
 const geoUrls = generateGeo({
   out: OUT,
@@ -678,6 +689,7 @@ ${rows.join('\n')}
 
 const coreUrls = [...baseUrls, ...seoUrls, ...geoUrls.methods, ...geoUrls.hubs];
 const shardLocs = [writeSitemapShard('core.xml', coreUrls, { rich: true })];
+shardLocs.push(writeSitemapShard('blog.xml', blogUrls, { rich: true }));
 const GEO_SHARD = 40000;
 for (let i = 0; i < geoUrls.geo.length; i += GEO_SHARD) {
   shardLocs.push(writeSitemapShard(`geo-${1 + i / GEO_SHARD}.xml`, geoUrls.geo.slice(i, i + GEO_SHARD)));
@@ -690,7 +702,7 @@ ${shardLocs.map((u) => `<sitemap><loc>${u}</loc><lastmod>${today}</lastmod></sit
 `;
 fs.writeFileSync(path.join(OUT, 'sitemap.xml'), sitemapIndex);
 
-const totalUrls = coreUrls.length + geoUrls.geo.length;
+const totalUrls = coreUrls.length + blogUrls.length + geoUrls.geo.length;
 console.log(`sitemap.xml: index of ${shardLocs.length} shards, ${totalUrls} urls total`);
 console.log(`total pages: ${totalUrls}`);
 
