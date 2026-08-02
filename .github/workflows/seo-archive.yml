@@ -1,0 +1,54 @@
+name: Build SEO pages archive
+
+# Собирает все статические SEO-страницы и публикует tar.gz архивом
+# в GitHub Releases (прямая ссылка, лимит 2 ГБ). Страницы приложения
+# (главная, каталог и т.п.) в архив не входят — его можно распаковывать
+# прямо в корень сайта на VPS.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Build all pages
+        env:
+          NEXT_PUBLIC_BASE_PATH: ''
+        run: node build.mjs
+
+      - name: Pack (без страниц приложения)
+        run: |
+          cd out
+          tar --exclude=./index.html --exclude=./catalog --exclude=./faq \
+              --exclude=./contacts --exclude=./travel --exclude=./reviews \
+              --exclude=./404.html --exclude=./CNAME --exclude=./.nojekyll \
+              --exclude=./images \
+              -czf ../platapay-seo-pages.tar.gz .
+          cd ..
+          ls -la platapay-seo-pages.tar.gz
+          echo "files inside: $(tar -tzf platapay-seo-pages.tar.gz | wc -l)"
+
+      - name: Publish to Releases
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="seo-pages-$(date -u +%Y%m%d-%H%M)"
+          gh release create "$TAG" platapay-seo-pages.tar.gz \
+            --title "SEO-страницы ($TAG)" \
+            --notes "~101 000 статических SEO-страниц PlataPay. Распаковка в корень сайта: tar -xzf platapay-seo-pages.tar.gz -C /путь/к/корню — страницы приложения (главная, каталог, faq, contacts, travel, reviews) исключены, ничего не перезапишется." \
+            --repo "$GITHUB_REPOSITORY"
+          echo "===================================================="
+          echo "DOWNLOAD: https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/platapay-seo-pages.tar.gz"
+          echo "===================================================="

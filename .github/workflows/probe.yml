@@ -1,0 +1,52 @@
+name: Diagnose payoplata.ru
+
+# Диагностика с раннера GitHub (у него полный доступ в интернет):
+# куда указывает DNS, кто хостер, что отвечает VPS на SEO-путях.
+# Запускается только вручную (workflow_dispatch), сайт не трогает.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: DNS
+        run: |
+          echo "== A payoplata.ru =="
+          dig +short payoplata.ru A
+          echo "== A/CNAME www.payoplata.ru =="
+          dig +short www.payoplata.ru A CNAME
+          echo "== NS =="
+          dig +short payoplata.ru NS
+        continue-on-error: true
+
+      - name: RDAP владельца IP
+        run: |
+          IP=$(dig +short payoplata.ru A | head -1)
+          echo "IP=$IP"
+          curl -sS -m 20 "https://rdap.db.ripe.net/ip/$IP" -o /tmp/rdap.json || true
+          python3 -c "import json; d=json.load(open('/tmp/rdap.json')); print('name:', d.get('name')); print('country:', d.get('country')); print('remarks:', d.get('remarks'))" || true
+        continue-on-error: true
+
+      - name: HTTP-ответы сайта
+        run: |
+          for u in \
+            "https://payoplata.ru/" \
+            "https://payoplata.ru/oplata-chatgpt/" \
+            "https://payoplata.ru/g/chatgpt/oplata-moskva.html" \
+            "https://payoplata.ru/gorod/" \
+            "https://payoplata.ru/sitemap.xml" \
+            "https://payoplata.ru/robots.txt" \
+            "https://alekyanrazmik-glitch.github.io/PlataPay/" ; do
+            echo "===== $u"
+            curl -sS -o /dev/null -m 20 -w "status=%{http_code} server_ip=%{remote_ip}\n" "$u" || true
+            curl -sSI -m 20 "$u" | sed -n '1,10p' || true
+          done
+        continue-on-error: true
+
+      - name: Фрагмент главной (что за приложение)
+        run: |
+          curl -sSL -m 20 "https://payoplata.ru/" | head -c 1500 || true
+          echo
+        continue-on-error: true
