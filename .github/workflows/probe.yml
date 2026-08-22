@@ -1,7 +1,8 @@
 name: Diagnose payoplata.ru
 
 # Диагностика с раннера GitHub (у него полный доступ в интернет):
-# куда указывает DNS, кто хостер, что отвечает VPS на SEO-путях.
+# куда указывает DNS, отвечает ли машина на пинг, какие порты открыты,
+# где теряются пакеты и что отдаёт HTTP.
 # Запускается только вручную (workflow_dispatch), сайт не трогает.
 
 on:
@@ -15,8 +16,9 @@ jobs:
         run: |
           echo "== A payoplata.ru =="
           dig +short payoplata.ru A
-          echo "== A/CNAME www.payoplata.ru =="
-          dig +short www.payoplata.ru A CNAME
+          echo "== www.payoplata.ru =="
+          dig +short www.payoplata.ru A
+          dig +short www.payoplata.ru CNAME
           echo "== NS =="
           dig +short payoplata.ru NS
         continue-on-error: true
@@ -27,6 +29,46 @@ jobs:
           echo "IP=$IP"
           curl -sS -m 20 "https://rdap.db.ripe.net/ip/$IP" -o /tmp/rdap.json || true
           python3 -c "import json; d=json.load(open('/tmp/rdap.json')); print('name:', d.get('name')); print('country:', d.get('country')); print('remarks:', d.get('remarks'))" || true
+        continue-on-error: true
+
+      # Ниже — то, что отличает «машина выключена / недоступна по сети»
+      # от «машина жива, но веб-сервер не отвечает».
+
+      - name: ICMP ping (жива ли машина)
+        run: |
+          IP=$(dig +short payoplata.ru A | head -1)
+          ping -c 4 -W 3 "$IP" || echo "ICMP не проходит (может быть закрыт файрволом — само по себе не приговор)"
+        continue-on-error: true
+
+      - name: Открытые порты (443/80/22)
+        run: |
+          IP=$(dig +short payoplata.ru A | head -1)
+          for p in 443 80 22; do
+            if nc -z -w 5 "$IP" "$p" 2>/dev/null; then
+              echo "порт $p: ОТКРЫТ"
+            else
+              echo "порт $p: закрыт/таймаут"
+            fi
+          done
+          echo
+          echo "Как читать:"
+          echo "  22 открыт, 443 закрыт  -> машина жива, лежит nginx/приложение"
+          echo "  все закрыты, ping идёт -> файрвол режет трафик"
+          echo "  все закрыты, ping не идёт -> VPS выключен/сеть снята (проверить панель и оплату)"
+        continue-on-error: true
+
+      - name: Traceroute (где теряются пакеты)
+        run: |
+          IP=$(dig +short payoplata.ru A | head -1)
+          sudo apt-get install -y -qq traceroute >/dev/null 2>&1 || true
+          traceroute -w 2 -m 20 "$IP" || true
+        continue-on-error: true
+
+      - name: TLS-сертификат
+        run: |
+          timeout 15 openssl s_client -connect payoplata.ru:443 -servername payoplata.ru </dev/null 2>/dev/null \
+            | openssl x509 -noout -subject -issuer -dates \
+            || echo "не удалось получить сертификат (соединение не установилось)"
         continue-on-error: true
 
       - name: HTTP-ответы сайта
@@ -40,13 +82,16 @@ jobs:
             "https://payoplata.ru/robots.txt" \
             "https://alekyanrazmik-glitch.github.io/PlataPay/" ; do
             echo "===== $u"
-            curl -sS -o /dev/null -m 20 -w "status=%{http_code} server_ip=%{remote_ip}\n" "$u" || true
-            curl -sSI -m 20 "$u" | sed -n '1,10p' || true
+            # короткие таймауты: недоступный хост не должен растягивать
+            # проверку на минуты (раньше весь шаг занимал 4 минуты)
+            curl -sS -o /dev/null --connect-timeout 5 -m 10 \
+              -w "status=%{http_code} server_ip=%{remote_ip} time=%{time_total}s\n" "$u" || true
+            curl -sSI --connect-timeout 5 -m 10 "$u" | sed -n '1,10p' || true
           done
         continue-on-error: true
 
       - name: Фрагмент главной (что за приложение)
         run: |
-          curl -sSL -m 20 "https://payoplata.ru/" | head -c 1500 || true
+          curl -sSL --connect-timeout 5 -m 15 "https://payoplata.ru/" | head -c 1500 || true
           echo
         continue-on-error: true
