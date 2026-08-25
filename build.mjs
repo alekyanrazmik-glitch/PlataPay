@@ -21,6 +21,7 @@ import path from 'node:path';
 import { buildEnhancement } from './seo/enhance.mjs';
 import { buildPricingUiPatch } from './seo/pricing-ui.mjs';
 import { renderReviewsPage } from './seo/reviews-page.mjs';
+import { renderBookingPage } from './seo/booking-page.mjs';
 import { patchStaticPrices } from './seo/static-pricing-patch.mjs';
 import { SERVICES as CAT_SERVICES, CATEGORIES as CAT_CATEGORIES } from './seo/data.mjs';
 import { APP_CSS, APP_JS } from './seo/app-shell.mjs';
@@ -636,6 +637,13 @@ fs.mkdirSync(path.join(OUT, 'reviews'), { recursive: true });
 fs.writeFileSync(path.join(OUT, 'reviews', 'index.html'), reviewsHtml);
 console.log('built reviews/index.html');
 
+// Посадочная страница оплаты Booking: /booking/. Калькулятор стоимости
+// брони (сумма в долларах × курс + наценка) и форма заявки.
+const bookingHtml = renderBookingPage({ base: BASE_HREF, verifyTags: verifyTags() });
+fs.mkdirSync(path.join(OUT, 'booking'), { recursive: true });
+fs.writeFileSync(path.join(OUT, 'booking', 'index.html'), bookingHtml);
+console.log('built booking/index.html');
+
 // ---------------- Статьи: /blog/ — ~520 материалов ----------------
 // Качественный контентный ярус под реальные информационные запросы:
 // «оплата не проходит», «без зарубежной карты», альтернативы, продление,
@@ -667,6 +675,7 @@ const baseUrls = [
   'https://payoplata.ru/faq/',
   'https://payoplata.ru/contacts/',
   'https://payoplata.ru/reviews/',
+  'https://payoplata.ru/booking/',
 ];
 const today = new Date().toISOString().slice(0, 10);
 const SM_DIR = path.join(OUT, 'sitemaps');

@@ -13,6 +13,17 @@ export const CONTACTS = {
   whatsapp: 'https://wa.me/79676726909',
 };
 
+// Куда уходят заявки: напрямую в Telegram (мгновенное подтверждение) и
+// резервом в Apps Script — он дублирует заявку в Google Sheets, на почту
+// и в тот же Telegram, если браузер клиента до api.telegram.org не достал.
+// Используется в APP_JS и на отдельных страницах со своей формой (/booking/).
+export const LEAD_DELIVERY = {
+  bot: '8842294846:AAGU2BA3RNFSWugpwKlFbnS9ucMluKzP4pg',
+  chat: '523060537',
+  sheets:
+    'https://script.google.com/macros/s/AKfycbyy43Ff5kKivrUsaXWEkda7JXNwHrOI-3BJIJp3UG9H8K6cb4DxjpC8eXNPGNEXQEWt/exec',
+};
+
 export const LEGAL =
   '© 2026 PlataPay · ООО «Аполон7-Рус» · ИНН 2304086282 · ОГРН 1252300042356 · г. Геленджик, ул. Островского, 80А';
 
@@ -433,9 +444,9 @@ export const APP_JS = `(function(){
   (window,document,"script","https://mc.yandex.ru/metrika/tag.js","ym");
   ym(109522965,"init",{clickmap:true,trackLinks:true,accurateTrackBounce:true,webvisor:true});
 
-  var BOT='8842294846:AAGU2BA3RNFSWugpwKlFbnS9ucMluKzP4pg';
-  var CHAT='523060537';
-  var SHEETS='https://script.google.com/macros/s/AKfycbyy43Ff5kKivrUsaXWEkda7JXNwHrOI-3BJIJp3UG9H8K6cb4DxjpC8eXNPGNEXQEWt/exec';
+  var BOT=${JSON.stringify(LEAD_DELIVERY.bot)};
+  var CHAT=${JSON.stringify(LEAD_DELIVERY.chat)};
+  var SHEETS=${JSON.stringify(LEAD_DELIVERY.sheets)};
 
   // Отправка заявки: напрямую в Telegram (быстрое подтверждение) и в
   // Apps Script (резерв: у части провайдеров РФ api.telegram.org закрыт,
@@ -652,7 +663,7 @@ export function pageFooter({ base, compact = false }) {
 <div class="pp-fbtns"><a class="pp-fbtn" href="${CONTACTS.telegram}" target="_blank" rel="noopener">Написать в Telegram</a><a class="pp-fbtn o" href="${CONTACTS.whatsapp}" target="_blank" rel="noopener">WhatsApp</a></div>
 </div>
 <div class="pp-fcol"><b>Навигация</b><a href="${base}">Главная</a><a href="${base}catalog/">Каталог</a><a href="${base}reviews/">Отзывы</a><a href="${base}faq/">Вопросы</a><a href="${base}contacts/">Контакты</a></div>
-<div class="pp-fcol"><b>Сервисы</b><a href="${base}seo/">Все сервисы</a><a href="${base}blog/">Статьи и инструкции</a>${GEO_ON ? `<a href="${base}gorod/">Оплата по городам</a>` : ''}<a href="https://travel.payoplata.ru" target="_blank" rel="noopener">Авиабилеты</a><a href="${base}catalog/">Каталог подписок</a></div>
+<div class="pp-fcol"><b>Сервисы</b><a href="${base}seo/">Все сервисы</a><a href="${base}blog/">Статьи и инструкции</a>${GEO_ON ? `<a href="${base}gorod/">Оплата по городам</a>` : ''}<a href="${base}booking/">Оплата брони Booking</a><a href="https://travel.payoplata.ru" target="_blank" rel="noopener">Авиабилеты</a><a href="${base}catalog/">Каталог подписок</a></div>
 <div class="pp-fcol"><b>Важно</b><p class="txt">${DISCLAIMER}</p></div>
 </div>
 <div class="pp-legal"><span>${LEGAL}</span></div>
