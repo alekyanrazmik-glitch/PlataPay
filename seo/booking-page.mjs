@@ -6,13 +6,12 @@
 // (шапка, футер, css/pp-app.css, js/pp-app.js) — свой только небольшой
 // блок стилей калькулятора и его скрипт.
 //
-// Формула цены (единственный источник правды — константы ниже):
+// ВАЖНО: механика цены — внутренняя. Клиент видит только итоговую сумму
+// в рублях; ни курс, ни процент наценки, ни её минимум на странице не
+// показываются и не называются словами. Константы ниже нужны только для
+// расчёта (и для примеров стоимости, которые считаются той же функцией).
 //
-//     итог = X$ × RATE_RUB_PER_USD + max(10%, MARKUP_MIN_RUB)
-//
-// То есть сумма брони в долларах переводится по внутреннему курсу
-// 90 ₽ за доллар, сверху — наценка 10%, но не меньше 1 500 ₽ (иначе
-// маленькие брони не окупают работу оператора и комиссию платёжки).
+//     итог = X$ × RATE_RUB_PER_USD + max(MARKUP_PCT%, MARKUP_MIN_RUB)
 
 import {
   CONTACTS,
@@ -20,7 +19,6 @@ import {
   breadcrumbLd,
   breadcrumbs,
   catSticker,
-  escapeAttr,
   escapeHtml,
   faqDetails,
   money,
@@ -29,7 +27,7 @@ import {
   wrapPage,
 } from './app-shell.mjs';
 
-// ------------------------------------------------------------ формула
+// ---------------------------------------------- формула (не для показа)
 
 /** Внутренний курс: сколько рублей берём за $1 брони. */
 export const RATE_RUB_PER_USD = 90;
@@ -41,28 +39,20 @@ export const MARKUP_MIN_RUB = 1500;
 /**
  * Расчёт стоимости брони.
  * @param {number} usd сумма брони на Booking.com в долларах
- * @returns {{usd:number, base:number, markup:number, total:number, rate:number, atMin:boolean}}
- *   base — бронь по курсу, markup — наценка, total — к оплате,
- *   rate — эффективный курс ₽ за $1, atMin — сработал минимум наценки.
+ * @returns {{usd:number, base:number, markup:number, total:number}}
+ *   total — единственное, что уходит на страницу; base и markup нужны
+ *   внутри сборки и в заявке оператору.
  */
 export function calcBooking(usd) {
   const amount = Number(usd) > 0 ? Number(usd) : 0;
   const base = Math.round(amount * RATE_RUB_PER_USD);
   const pct = Math.round((base * MARKUP_PCT) / 100);
   const markup = amount > 0 ? Math.max(pct, MARKUP_MIN_RUB) : 0;
-  const total = base + markup;
-  return {
-    usd: amount,
-    base,
-    markup,
-    total,
-    rate: amount > 0 ? total / amount : 0,
-    atMin: amount > 0 && pct < MARKUP_MIN_RUB,
-  };
+  return { usd: amount, base, markup, total: base + markup };
 }
 
-// Примеры для таблицы «как считаем» — считаются той же функцией, поэтому
-// разъехаться с калькулятором не могут.
+// Примеры стоимости — считаются той же функцией, поэтому разъехаться с
+// калькулятором не могут. Показываем только «бронь → итог».
 const EXAMPLES = [50, 100, 200, 400, 800, 1500];
 
 const CANONICAL = 'https://payoplata.ru/booking/';
@@ -78,16 +68,16 @@ const KINDS = [
 
 const FAQ = [
   {
-    q: 'Как считается стоимость оплаты брони?',
-    a: `Сумма брони с сайта Booking.com в долларах умножается на курс ${RATE_RUB_PER_USD} ₽ за $1, сверху добавляется наценка ${MARKUP_PCT}%, но не меньше ${money(MARKUP_MIN_RUB)}. Например, бронь на $100 — это ${money(calcBooking(100).base)} по курсу плюс ${money(calcBooking(100).markup)} наценки, итого ${money(calcBooking(100).total)}.`,
+    q: 'Что входит в сумму, которую показывает калькулятор?',
+    a: 'Всё: оплата самой брони на Booking.com, конвертация валюты, комиссии платёжных систем и работа оператора. Это финальная сумма в рублях — сверху ничего не добавляется, доплат после оплаты не бывает.',
   },
   {
-    q: 'Почему курс 90 ₽, а не биржевой?',
-    a: 'В курс уже заложена конвертация на стороне зарубежной карты, комиссия платёжной системы и валютные колебания за то время, пока бронь оплачивается. Никаких доплат после оплаты не будет: итоговую сумму в рублях мы фиксируем в заявке до того, как вы что-то переводите.',
+    q: 'Сумма может измениться после того, как я оставлю заявку?',
+    a: 'Оператор проверяет бронь и подтверждает сумму в рублях до того, как вы что-то переводите. После подтверждения она фиксируется и не меняется — даже если валюта за это время подорожает. Измениться цена может только в одном случае: если сам объект поднял стоимость брони или вы поменяли даты.',
   },
   {
     q: 'А если бронь в евро, фунтах или местной валюте?',
-    a: 'Тоже оплачиваем. Booking.com умеет показывать цену в долларах — переключите валюту в правом верхнем углу сайта и посчитайте по калькулятору. Если переключить не получается, пришлите ссылку на бронь: пересчитаем сами и назовём точную сумму в рублях.',
+    a: 'Тоже оплачиваем. Booking.com умеет показывать цену в долларах — переключите валюту в правом верхнем углу сайта и посчитайте по калькулятору. Если переключить не получается, пришлите ссылку на бронь: посчитаем сами и назовём точную сумму в рублях.',
   },
   {
     q: 'Бронь оформляете вы или я сам?',
@@ -111,13 +101,14 @@ const FAQ = [
   },
   {
     q: 'А если бронь не пройдёт?',
-    a: 'Возвращаем деньги полностью, без удержания комиссии. Такое бывает редко — как правило, когда объект уже снял номер с продажи или сменилась цена. В этом случае предложим альтернативу или вернём перевод.',
+    a: 'Возвращаем деньги полностью, ничего не удерживая. Такое бывает редко — как правило, когда объект уже снял номер с продажи или сменилась цена. В этом случае предложим альтернативу или вернём перевод.',
   },
 ];
 
 // --------------------------------------------------------------- стили
 
 const CALC_CSS = `
+#calc,#zakaz{scroll-margin-top:84px}
 .bk-hero{position:relative;overflow:hidden;border-radius:26px;border:1px solid var(--line);
   background:linear-gradient(180deg,#1a2e4e 0%,#142543 100%);padding:28px;margin:16px 0 0}
 .bk-hero .veil{position:absolute;inset:0;opacity:.16;pointer-events:none}
@@ -128,13 +119,12 @@ const CALC_CSS = `
 .bk-hero .sub{color:var(--muted);font-size:15px;margin:0;max-width:640px}
 @media(max-width:640px){.bk-hero{padding:22px 18px}.bk-hero .tile{display:none}}
 
-#calc,#zakaz{scroll-margin-top:84px}
 .bk-calc{position:relative;border:1px solid var(--line-strong);border-radius:26px;
   background:linear-gradient(180deg,#13294e 0%,#0f2144 100%);padding:24px;margin:18px 0 0}
 .bk-calc .kicker{font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
 .bk-calc h2{margin:6px 0 4px}
 .bk-calc .sub{color:var(--muted);font-size:13.5px;margin:0}
-.bk-grid{display:grid;gap:18px;grid-template-columns:1fr 1fr;align-items:start;margin-top:18px}
+.bk-grid{display:grid;gap:18px;grid-template-columns:1fr 1fr;align-items:stretch;margin-top:18px}
 @media(max-width:860px){.bk-grid{grid-template-columns:1fr}.bk-calc{padding:20px 18px}}
 
 .bk-lbl{display:block;font-size:12px;color:var(--muted);margin:0 0 8px}
@@ -153,20 +143,19 @@ const CALC_CSS = `
   background:#fff;border:5px solid var(--brand);box-shadow:0 2px 10px rgba(0,0,0,.45);cursor:pointer}
 .bk-range::-moz-range-thumb{width:24px;height:24px;border-radius:999px;background:#fff;border:5px solid var(--brand);cursor:pointer}
 .bk-scale{display:flex;justify-content:space-between;font-size:11.5px;color:var(--faint)}
-.bk-note{font-size:12.5px;color:var(--dim);margin:14px 0 0;line-height:1.5}
+.bk-note{grid-column:1/-1;font-size:12.5px;color:var(--dim);margin:2px 0 0;line-height:1.5}
 
-.bk-out{border:1px solid var(--line);background:rgba(8,23,47,.72);border-radius:20px;padding:18px 20px}
-.bk-row{display:flex;align-items:baseline;justify-content:space-between;gap:14px;
-  padding:11px 0;border-bottom:1px dashed var(--line-dim);font-size:13.5px;color:var(--text3)}
-.bk-row b{color:var(--ice2);font-weight:600;white-space:nowrap}
-.bk-row i{font-style:normal;color:var(--faint)}
-.bk-flag{display:inline-block;margin-left:6px;padding:2px 8px;border-radius:999px;
-  background:rgba(255,197,61,.14);color:var(--gold);font-size:10.5px;font-weight:700;white-space:nowrap}
-.bk-total{display:flex;align-items:baseline;justify-content:space-between;gap:14px;padding:16px 0 2px}
-.bk-total span{font-size:14px;color:var(--muted)}
-.bk-total b{font-size:clamp(26px,6vw,34px);font-weight:800;letter-spacing:-1.2px;color:var(--gold);white-space:nowrap}
-.bk-eff{font-size:12px;color:var(--dim);margin:0 0 16px}
-.bk-out .pp-btn{width:100%}
+.bk-out{display:flex;flex-direction:column;border:1px solid var(--line);background:rgba(8,23,47,.72);
+  border-radius:20px;padding:22px 20px}
+.bk-cap{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--dim)}
+.bk-sum-big{font-size:clamp(34px,8vw,46px);font-weight:800;letter-spacing:-1.6px;color:var(--gold);
+  line-height:1.05;margin:8px 0 2px;white-space:nowrap}
+.bk-sum-for{font-size:13px;color:var(--muted);margin:0 0 16px;min-height:19px}
+.bk-incl{list-style:none;padding:0;margin:0 0 18px}
+.bk-incl li{position:relative;padding-left:26px;font-size:13.5px;color:var(--text3);line-height:1.5;margin:0 0 8px}
+.bk-incl li::before{content:"";position:absolute;left:2px;top:5px;width:13px;height:8px;
+  border-left:2px solid var(--mint);border-bottom:2px solid var(--mint);transform:rotate(-45deg)}
+.bk-out .pp-btn{width:100%;margin-top:auto}
 .bk-out .fine{font-size:11.5px;color:var(--faint);margin:12px 0 0;line-height:1.5;text-align:center}
 
 .bk-form{display:grid;gap:12px;grid-template-columns:1fr 1fr;margin-top:4px}
@@ -185,46 +174,38 @@ const CALC_CSS = `
 
 // --------------------------------------------------------------- скрипт
 
-// Калькулятор + отправка заявки. Константы формулы подставляются из
-// модуля, чтобы клиентский расчёт совпадал с серверным (таблица примеров).
+// Калькулятор + отправка заявки. Коэффициенты подставляются из модуля,
+// чтобы клиентский расчёт совпадал с примерами стоимости на странице.
+// Наружу скрипт отдаёт только итог: разбивки в интерфейсе нет.
 const calcJs = ({ page }) => `<script>
 (function(){
-  var RATE=${RATE_RUB_PER_USD}, PCT=${MARKUP_PCT}, MIN=${MARKUP_MIN_RUB};
+  var A=${RATE_RUB_PER_USD}, B=${MARKUP_PCT}, C=${MARKUP_MIN_RUB};
   var MAX_USD=100000, RANGE_MAX=3000;
   var nf=new Intl.NumberFormat('ru-RU');
   function rub(n){return nf.format(Math.round(n)).replace(/ /g,'\\u00a0')+'\\u00a0\\u20bd';}
 
   function calc(usd){
-    var amount=usd>0?usd:0;
-    var base=Math.round(amount*RATE);
-    var pct=Math.round(base*PCT/100);
-    var markup=amount>0?Math.max(pct,MIN):0;
-    return {usd:amount,base:base,markup:markup,total:base+markup,atMin:amount>0&&pct<MIN};
+    var a=usd>0?usd:0;
+    var b=Math.round(a*A);
+    var m=a>0?Math.max(Math.round(b*B/100),C):0;
+    return {usd:a,total:b+m};
   }
 
   var input=document.getElementById('bkUsd');
   var range=document.getElementById('bkRange');
-  var elBase=document.getElementById('bkBase');
-  var elBaseLbl=document.getElementById('bkBaseLbl');
-  var elMarkup=document.getElementById('bkMarkup');
-  var elFlag=document.getElementById('bkFlag');
   var elTotal=document.getElementById('bkTotal');
-  var elEff=document.getElementById('bkEff');
+  var elFor=document.getElementById('bkFor');
   var formUsd=document.getElementById('bkFormUsd');
   var formSum=document.getElementById('bkFormSum');
   var state=calc(0);
 
   function render(usd){
     state=calc(usd);
-    var shown=state.usd?nf.format(state.usd):'0';
-    elBaseLbl.textContent='Бронь '+shown+'\\u00a0$ \\u00d7 '+RATE+'\\u00a0\\u20bd';
-    elBase.textContent=rub(state.base);
-    elMarkup.textContent=rub(state.markup);
-    elFlag.hidden=!state.atMin;
-    elTotal.textContent=rub(state.total);
-    elEff.textContent=state.usd
-      ? 'Эффективный курс — '+nf.format(Math.round(state.total/state.usd*100)/100).replace(/ /g,'\\u00a0')+'\\u00a0\\u20bd за $1'
-      : 'Введите сумму брони, чтобы увидеть итог';
+    var shown=state.usd?nf.format(state.usd):'';
+    elTotal.textContent=state.usd?rub(state.total):'\\u2014';
+    elFor.textContent=state.usd
+      ? 'за бронь '+shown+'\\u00a0$ на Booking.com'
+      : 'Введите стоимость брони, чтобы увидеть сумму';
     range.style.setProperty('--fill',Math.min(100,state.usd/RANGE_MAX*100)+'%');
     if(formUsd) formUsd.value=state.usd||'';
     if(formSum) formSum.innerHTML=state.usd
@@ -305,19 +286,16 @@ const calcJs = ({ page }) => `<script>
     sending=true;btn.disabled=true;
     var btnText=btn.textContent;btn.textContent='Отправляем…';
 
-    var priceLine=state.usd
-      ? rub(state.total)+' ('+nf.format(state.usd)+' $ \\u00d7 '+RATE+' \\u20bd + наценка '+rub(state.markup)+')'
-      : 'по калькулятору не считали';
     var msg=['Заявка на оплату брони Booking (страница /booking/)',
       'Что бронируют: '+kind,
       'Сумма брони: '+(state.usd?nf.format(state.usd)+' $':'не указана'),
-      'К оплате: '+priceLine,
+      'К оплате: '+(state.usd?rub(state.total):'по калькулятору не считали'),
       (link?'Бронь: '+link:null),
       'Контакт: '+contact,
       'Страница: https://payoplata.ru'+PAGE].filter(Boolean).join('\\n');
 
     var payload={type:'booking',source:'booking-landing',service:'Booking.com',
-      tier:kind,amount:state.usd||'',currency:'USD',price:priceLine,
+      tier:kind,amount:state.usd||'',currency:'USD',price:state.usd?rub(state.total):'',
       contact:contact,note:link,page:PAGE,intent:'booking-calc',ts:Date.now()};
 
     var tgDirect=new Promise(function(resolve){
@@ -355,7 +333,7 @@ const calcJs = ({ page }) => `<script>
 
 export function renderBookingPage({ base, verifyTags = '' }) {
   const st = catSticker('Путешествия');
-  const ex100 = calcBooking(100);
+  const demo = calcBooking(120);
 
   const crumbs = breadcrumbs([
     { name: 'Главная', href: base },
@@ -369,7 +347,7 @@ export function renderBookingPage({ base, verifyTags = '' }) {
 <span class="tile">BK</span>
 <div>
 <h1>Оплата брони Booking.com из России</h1>
-<p class="sub">Российская карта на Booking.com не проходит — мы оплачиваем бронь зарубежной картой за вас. Посчитайте стоимость в калькуляторе: сумма брони в долларах по курсу ${RATE_RUB_PER_USD} ₽ плюс наценка ${MARKUP_PCT}% (минимум ${money(MARKUP_MIN_RUB)}). Подтверждение от отеля приходит вам на почту.</p>
+<p class="sub">Российская карта на Booking.com не проходит — мы оплачиваем бронь зарубежной картой за вас. Введите стоимость брони в долларах: калькулятор сразу покажет итоговую сумму в рублях, в которую уже входят оплата и все комиссии. Подтверждение от отеля придёт вам на почту.</p>
 <div class="pp-cta-row">
 <a class="pp-btn" href="#calc">Рассчитать стоимость</a>
 <a class="pp-btn-ghost" href="${CONTACTS.telegram}" target="_blank" rel="noopener">Написать в Telegram</a>
@@ -381,7 +359,7 @@ export function renderBookingPage({ base, verifyTags = '' }) {
   const stats = `<div class="pp-stats">
 <div><b class="g">5.0</b><span>рейтинг на Avito</span></div>
 <div><b>5–15 мин</b><span>от заявки до брони</span></div>
-<div><b>${RATE_RUB_PER_USD} ₽</b><span>курс за $1</span></div>
+<div><b>0 ₽</b><span>скрытых комиссий</span></div>
 <div><b>08–24</b><span>ежедневно, МСК</span></div>
 </div>`;
 
@@ -400,40 +378,50 @@ export function renderBookingPage({ base, verifyTags = '' }) {
 <input class="bk-range" id="bkRange" type="range" min="0" max="3000" step="10" value="120" aria-label="Стоимость брони, ползунок">
 <div class="bk-scale"><span>$0</span><span>$1 500</span><span>$3 000+</span></div>
 <div class="pp-chips">${chips}</div>
-<p class="bk-note">Цена на Booking.com показана в другой валюте? Переключите её на USD в правом верхнем углу сайта — или просто пришлите нам ссылку на бронь, пересчитаем сами.</p>
 </div>
 <div class="bk-out">
-<div class="bk-row"><span id="bkBaseLbl">Бронь 120 $ × ${RATE_RUB_PER_USD} ₽</span><b id="bkBase">${money(calcBooking(120).base)}</b></div>
-<div class="bk-row"><span>Наценка ${MARKUP_PCT}% <i>(мин. ${money(MARKUP_MIN_RUB)})</i><span class="bk-flag" id="bkFlag" hidden>минимум</span></span><b id="bkMarkup">${money(calcBooking(120).markup)}</b></div>
-<div class="bk-total"><span>Итого к оплате</span><b id="bkTotal">${money(calcBooking(120).total)}</b></div>
-<p class="bk-eff" id="bkEff">Эффективный курс — ${(Math.round(calcBooking(120).rate * 100) / 100).toLocaleString('ru-RU')} ₽ за $1</p>
+<div class="bk-cap">Итого к оплате</div>
+<div class="bk-sum-big" id="bkTotal">${money(demo.total)}</div>
+<p class="bk-sum-for" id="bkFor">за бронь 120 $ на Booking.com</p>
+<ul class="bk-incl">
+<li>Оплата брони и все комиссии уже включены</li>
+<li>Сумма фиксируется до оплаты и больше не меняется</li>
+<li>Подтверждение от Booking.com — вам на почту</li>
+</ul>
 <button class="pp-btn" type="button" id="bkGo">Оформить оплату брони</button>
-<noscript><p class="fine">Калькулятор считает в браузере — включите JavaScript или посмотрите готовые примеры расчёта в таблице ниже.</p></noscript>
-<p class="fine">Расчёт справочный. Точную сумму оператор подтверждает в заявке до оплаты — после подтверждения она не меняется.</p>
+<noscript><p class="fine">Калькулятор считает в браузере — включите JavaScript или посмотрите готовые примеры стоимости ниже.</p></noscript>
+<p class="fine">Расчёт предварительный. Точную сумму оператор подтверждает в заявке — после подтверждения она не меняется.</p>
 </div>
+<p class="bk-note">Цена на Booking.com показана в другой валюте? Переключите её на USD в правом верхнем углу сайта — или просто пришлите нам ссылку на бронь, посчитаем сами.</p>
 </div>
 </section>`;
 
   const table = `<div class="tbl-wrap"><table>
-<thead><tr><th>Бронь на Booking</th><th>По курсу ${RATE_RUB_PER_USD} ₽</th><th>Наценка ${MARKUP_PCT}%</th><th>Итого к оплате</th></tr></thead>
+<thead><tr><th>Бронь на Booking.com</th><th>Итого к оплате</th></tr></thead>
 <tbody>
 ${EXAMPLES.map((usd) => {
   const r = calcBooking(usd);
-  return `<tr><td>$${usd.toLocaleString('ru-RU')}</td><td>${money(r.base)}</td><td>${money(r.markup)}${r.atMin ? ' <span class="bk-flag">минимум</span>' : ''}</td><td><b>${money(r.total)}</b></td></tr>`;
+  return `<tr><td>$${usd.toLocaleString('ru-RU')}</td><td><b>${money(r.total)}</b></td></tr>`;
 }).join('\n')}
 </tbody></table></div>`;
 
-  const how = `<section class="pp-sec"><h2>Как считается цена</h2>
+  const included = `<section class="pp-sec"><h2>Что входит в стоимость</h2>
 <div class="block">
-<p>Формула одна для всех броней, без скрытых коэффициентов:</p>
+<p>Сумма в калькуляторе — финальная. В неё уже включено всё:</p>
 <ul class="check">
-<li><b>Сумма брони × ${RATE_RUB_PER_USD} ₽</b> — переводим доллары в рубли по внутреннему курсу. В него уже заложены конвертация зарубежной карты и комиссия платёжной системы.</li>
-<li><b>Плюс наценка ${MARKUP_PCT}%</b> — это работа оператора: оформление, оплата, проверка подтверждения и поддержка до заезда.</li>
-<li><b>Минимальная наценка — ${money(MARKUP_MIN_RUB)}</b>. На маленьких бронях ${MARKUP_PCT}% не покрывают расходы, поэтому берётся порог. Начиная с брони примерно в $${Math.round(MARKUP_MIN_RUB / (RATE_RUB_PER_USD * (MARKUP_PCT / 100)))} наценка считается обычным способом — ${MARKUP_PCT}% от суммы.</li>
+<li><b>Оплата самой брони</b> на Booking.com зарубежной картой.</li>
+<li><b>Конвертация валюты</b> и комиссии платёжных систем — отдельной строкой ничего не добавляется.</li>
+<li><b>Работа оператора</b>: оформление, оплата, проверка подтверждения и поддержка до заезда.</li>
+<li><b>Возврат</b>, если бронь по каким-то причинам не пройдёт.</li>
 </ul>
-<p class="hint">Пример: бронь на $100 → ${money(ex100.base)} по курсу + ${money(ex100.markup)} наценки = <b>${money(ex100.total)}</b>.</p>
+<p class="hint">Оператор подтверждает сумму до оплаты. После подтверждения она не меняется — доплат не будет.</p>
 </div>
+</section>`;
+
+  const examples = `<section class="pp-sec"><h2>Примеры стоимости</h2>
+<p>Так выглядит итог для типичных броней — от одной ночи в городском отеле до недели в апартаментах:</p>
 ${table}
+<p class="hint">Вашей суммы нет в таблице? Посчитайте точно в <a href="#calc">калькуляторе</a> — он работает для любой суммы.</p>
 </section>`;
 
   const steps = `<section class="pp-sec"><h2>Как проходит оплата</h2>
@@ -466,6 +454,7 @@ ${table}
 <p class="hint">Бронь может быть уже оформлена на вас — тогда нужен только номер бронирования. Если объекта ещё нет, пришлите ссылку и даты: подберём тот же вариант и оформим сами.</p>
 </section>`;
 
+  const prefill = encodeURIComponent('Привет! Хочу оплатить бронь на Booking.com');
   const order = `<section class="pp-order" id="zakaz">
 <div class="kicker">Заявка</div>
 <h2>Оплатить бронь Booking.com</h2>
@@ -478,8 +467,8 @@ ${table}
 <div class="hp" aria-hidden="true"><label>Компания<input type="text" name="company" tabindex="-1" autocomplete="off"></label></div>
 <button class="pp-btn" type="submit">Отправить заявку</button>
 </form>
-<p class="bk-sum" id="bkFormSum">По калькулятору: бронь 120 $ → к оплате <b>${money(calcBooking(120).total)}</b></p>
-<div class="alt">Или сразу напишите: <a href="${CONTACTS.telegram}?text=${encodeURIComponent('Привет! Хочу оплатить бронь на Booking.com')}" target="_blank" rel="noopener">Telegram</a> · <a href="${CONTACTS.whatsapp}?text=${encodeURIComponent('Привет! Хочу оплатить бронь на Booking.com')}" target="_blank" rel="noopener">WhatsApp</a></div>
+<p class="bk-sum" id="bkFormSum">По калькулятору: бронь 120 $ → к оплате <b>${money(demo.total)}</b></p>
+<div class="alt">Или сразу напишите: <a href="${CONTACTS.telegram}?text=${prefill}" target="_blank" rel="noopener">Telegram</a> · <a href="${CONTACTS.whatsapp}?text=${prefill}" target="_blank" rel="noopener">WhatsApp</a></div>
 <div class="err" hidden></div>
 </section>`;
 
@@ -498,7 +487,8 @@ ${table}
 ${crumbs}
 ${hero}
 ${calc}
-${how}
+${included}
+${examples}
 ${steps}
 ${what}
 ${order}
@@ -530,12 +520,8 @@ ${stickyBar({ title: 'Оплатить бронь Booking' })}`;
       '@type': 'Offer',
       priceCurrency: 'RUB',
       url: CANONICAL,
-      priceSpecification: {
-        '@type': 'PriceSpecification',
-        priceCurrency: 'RUB',
-        minPrice: MARKUP_MIN_RUB,
-        description: `Стоимость брони в долларах по курсу ${RATE_RUB_PER_USD} ₽ за $1 плюс наценка ${MARKUP_PCT}%, но не менее ${MARKUP_MIN_RUB} ₽`,
-      },
+      description:
+        'Итоговая сумма в рублях зависит от стоимости брони и рассчитывается в калькуляторе на странице. Оплата брони и все комиссии включены; сумма подтверждается до оплаты.',
     },
   })}</script>`;
 
@@ -549,7 +535,8 @@ ${stickyBar({ title: 'Оплатить бронь Booking' })}`;
     base,
     canonical: CANONICAL,
     title: 'Оплата брони Booking.com из России — калькулятор стоимости | PlataPay',
-    description: `Оплатим бронь Booking.com из России зарубежной картой. Калькулятор: сумма брони в долларах × ${RATE_RUB_PER_USD} ₽ + ${MARKUP_PCT}%, минимум ${money(MARKUP_MIN_RUB)}. Подтверждение за 5–15 минут.`,
+    description:
+      'Оплатим бронь Booking.com из России зарубежной картой. Калькулятор покажет итоговую сумму в рублях — оплата и все комиссии включены. Подтверждение за 5–15 минут.',
     verifyTags,
     ld: crumbLd + serviceLd + faqLd,
     body,
