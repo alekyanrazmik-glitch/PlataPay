@@ -22,6 +22,7 @@ import { buildEnhancement } from './seo/enhance.mjs';
 import { buildPricingUiPatch } from './seo/pricing-ui.mjs';
 import { renderReviewsPage } from './seo/reviews-page.mjs';
 import { patchStaticPrices } from './seo/static-pricing-patch.mjs';
+import { generateRedeem } from './seo/redeem.mjs';
 import { SERVICES as CAT_SERVICES, CATEGORIES as CAT_CATEGORIES } from './seo/data.mjs';
 import { APP_CSS, APP_JS } from './seo/app-shell.mjs';
 
@@ -636,6 +637,11 @@ fs.mkdirSync(path.join(OUT, 'reviews'), { recursive: true });
 fs.writeFileSync(path.join(OUT, 'reviews', 'index.html'), reviewsHtml);
 console.log('built reviews/index.html');
 
+// ---------------- Активация кодов: /redeem/ ----------------
+// Страницы обмена кода на подписку (ChatGPT / Claude / Grok), проверка
+// статуса и восстановление. Адрес API задаётся REDEEM_API.
+const redeemUrls = generateRedeem({ out: OUT, base: BASE_HREF, verifyTags: verifyTags() });
+
 // ---------------- Статьи: /blog/ — ~520 материалов ----------------
 // Качественный контентный ярус под реальные информационные запросы:
 // «оплата не проходит», «без зарубежной карты», альтернативы, продление,
@@ -687,7 +693,7 @@ ${rows.join('\n')}
   return `https://payoplata.ru/sitemaps/${name}`;
 }
 
-const coreUrls = [...baseUrls, ...seoUrls, ...geoUrls.methods, ...geoUrls.hubs];
+const coreUrls = [...baseUrls, ...redeemUrls, ...seoUrls, ...geoUrls.methods, ...geoUrls.hubs];
 const shardLocs = [writeSitemapShard('core.xml', coreUrls, { rich: true })];
 shardLocs.push(writeSitemapShard('blog.xml', blogUrls, { rich: true }));
 const GEO_SHARD = 40000;

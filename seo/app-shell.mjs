@@ -652,7 +652,7 @@ export function pageFooter({ base, compact = false }) {
 <div class="pp-fbtns"><a class="pp-fbtn" href="${CONTACTS.telegram}" target="_blank" rel="noopener">Написать в Telegram</a><a class="pp-fbtn o" href="${CONTACTS.whatsapp}" target="_blank" rel="noopener">WhatsApp</a></div>
 </div>
 <div class="pp-fcol"><b>Навигация</b><a href="${base}">Главная</a><a href="${base}catalog/">Каталог</a><a href="${base}reviews/">Отзывы</a><a href="${base}faq/">Вопросы</a><a href="${base}contacts/">Контакты</a></div>
-<div class="pp-fcol"><b>Сервисы</b><a href="${base}seo/">Все сервисы</a><a href="${base}blog/">Статьи и инструкции</a>${GEO_ON ? `<a href="${base}gorod/">Оплата по городам</a>` : ''}<a href="https://travel.payoplata.ru" target="_blank" rel="noopener">Авиабилеты</a><a href="${base}catalog/">Каталог подписок</a></div>
+<div class="pp-fcol"><b>Сервисы</b><a href="${base}seo/">Все сервисы</a><a href="${base}blog/">Статьи и инструкции</a>${GEO_ON ? `<a href="${base}gorod/">Оплата по городам</a>` : ''}<a href="https://travel.payoplata.ru" target="_blank" rel="noopener">Авиабилеты</a><a href="${base}catalog/">Каталог подписок</a><a href="${base}redeem/">Активация кода</a></div>
 <div class="pp-fcol"><b>Важно</b><p class="txt">${DISCLAIMER}</p></div>
 </div>
 <div class="pp-legal"><span>${LEGAL}</span></div>
@@ -686,6 +686,7 @@ export function wrapPage({
   ogTags = true,
   extraHead = '',
   extraBodyEnd = '',
+  bodyAttrs = '',
 }) {
   // og:* нужны для шеринга; на массовом гео-ярусе их выключаем — там
   // каждые лишние 300 байт умножаются на сто тысяч страниц.
@@ -713,7 +714,7 @@ export function wrapPage({
 ${og}${verifyTags}${ld}${extraHead}
 <script src="${base}js/pp-app.js" defer></script>
 </head>
-<body>
+<body${bodyAttrs}>
 ${noscriptPixel ? '<noscript><div><img src="https://mc.yandex.ru/watch/109522965" style="position:absolute;left:-9999px;" alt=""/></div></noscript>' : ''}
 ${pageHeader({ base, nav, cta })}
 ${body}
