@@ -652,7 +652,7 @@ export function pageFooter({ base, compact = false }) {
 <div class="pp-fbtns"><a class="pp-fbtn" href="${CONTACTS.telegram}" target="_blank" rel="noopener">Написать в Telegram</a><a class="pp-fbtn o" href="${CONTACTS.whatsapp}" target="_blank" rel="noopener">WhatsApp</a></div>
 </div>
 <div class="pp-fcol"><b>Навигация</b><a href="${base}">Главная</a><a href="${base}catalog/">Каталог</a><a href="${base}reviews/">Отзывы</a><a href="${base}faq/">Вопросы</a><a href="${base}contacts/">Контакты</a></div>
-<div class="pp-fcol"><b>Сервисы</b><a href="${base}seo/">Все сервисы</a><a href="${base}blog/">Статьи и инструкции</a>${GEO_ON ? `<a href="${base}gorod/">Оплата по городам</a>` : ''}<a href="https://travel.payoplata.ru" target="_blank" rel="noopener">Авиабилеты</a><a href="${base}catalog/">Каталог подписок</a><a href="${base}redeem/">Активация кода</a></div>
+<div class="pp-fcol"><b>Сервисы</b><a href="${base}seo/">Все сервисы</a><a href="${base}blog/">Статьи и инструкции</a>${GEO_ON ? `<a href="${base}gorod/">Оплата по городам</a>` : ''}<a href="https://travel.payoplata.ru" target="_blank" rel="noopener">Авиабилеты</a><a href="${base}catalog/">Каталог подписок</a><a href="https://redeem.payoplata.ru/">Активация кода</a></div>
 <div class="pp-fcol"><b>Важно</b><p class="txt">${DISCLAIMER}</p></div>
 </div>
 <div class="pp-legal"><span>${LEGAL}</span></div>
@@ -687,7 +687,12 @@ export function wrapPage({
   extraHead = '',
   extraBodyEnd = '',
   bodyAttrs = '',
+  // Откуда грузить css/js/favicon. По умолчанию — там же, где сайт.
+  // Отдельный поддомен (redeem.payoplata.ru) держит ассеты у себя,
+  // а base при этом указывает на основной сайт — для шапки и футера.
+  assetBase = '',
 }) {
+  const A = assetBase || base;
   // og:* нужны для шеринга; на массовом гео-ярусе их выключаем — там
   // каждые лишние 300 байт умножаются на сто тысяч страниц.
   const og = ogTags
@@ -709,10 +714,10 @@ export function wrapPage({
 <title>${escapeHtml(title)}</title>
 <meta name="description" content="${escapeAttr(clampMeta(description))}">
 <link rel="canonical" href="${canonical}">
-<link rel="icon" href="${base}favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="${base}css/pp-app.css">
+<link rel="icon" href="${A}favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="${A}css/pp-app.css">
 ${og}${verifyTags}${ld}${extraHead}
-<script src="${base}js/pp-app.js" defer></script>
+<script src="${A}js/pp-app.js" defer></script>
 </head>
 <body${bodyAttrs}>
 ${noscriptPixel ? '<noscript><div><img src="https://mc.yandex.ru/watch/109522965" style="position:absolute;left:-9999px;" alt=""/></div></noscript>' : ''}

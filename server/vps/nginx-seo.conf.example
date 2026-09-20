@@ -33,7 +33,7 @@ server {
     }
 
     # Долгий кэш для общих ассетов SEO-страниц
-    location ~ ^/(css/pp-(app|redeem)\.css|js/pp-(app|pricing|redeem)\.js)$ {
+    location ~ ^/(css/pp-app\.css|js/pp-(app|pricing)\.js)$ {
         expires 7d;
         add_header Cache-Control "public";
         try_files $uri @app;

@@ -1,0 +1,97 @@
+# Поддомен активации: redeem.payoplata.ru
+#
+# Отдельный статический сайт из каталога out-redeem/ (собирается тем же
+# build.mjs). Здесь же живёт прокси /redeem-api — на случай, если у
+# поставщика закрыт CORS и браузер блокирует прямые запросы со страницы.
+#
+# ПОРЯДОК ПОДКЛЮЧЕНИЯ
+#   1) DNS: A-запись redeem.payoplata.ru → тот же IP, что и payoplata.ru
+#   2) bash server/vps/deploy-redeem.sh   (выложит сайт в /var/www/platapay-redeem)
+#   3) этот конфиг → /etc/nginx/sites-available/redeem.payoplata.ru
+#   4) certbot --nginx -d redeem.payoplata.ru
+#   5) nginx -t && systemctl reload nginx
+#
+# СМЕНА ПОСТАВЩИКА API
+# Адрес поставщика лежит в одном файле — /var/www/platapay-redeem/api-config.js.
+# Правится прямо на сервере, пересборка и передеплой не нужны: он отдаётся
+# с Cache-Control: no-cache, достаточно обновить страницу. deploy-redeem.sh
+# сохраняет ваш файл при обновлении сайта.
+# Если меняете поставщика — поправьте и proxy_pass в блоке /redeem-api ниже.
+
+# --- В блоке http { } (обычно /etc/nginx/nginx.conf) ---
+limit_req_zone $binary_remote_addr zone=redeemapi:10m rate=30r/m;
+
+server {
+    server_name redeem.payoplata.ru;
+    # listen/ssl_* добавит certbot
+
+    root /var/www/platapay-redeem;
+    index index.html;
+
+    # Чистые адреса: /claude/ → /claude/index.html
+    location / {
+        try_files $uri $uri/index.html =404;
+    }
+
+    # Адрес API — всегда свежий, иначе смена поставщика не доедет до людей.
+    location = /api-config.js {
+        add_header Cache-Control "no-cache, must-revalidate" always;
+        try_files $uri =404;
+    }
+
+    # Общие ассеты можно кэшировать надолго.
+    location ~ ^/(css/pp-(app|redeem)\.css|js/pp-(app|redeem)\.js|favicon\.svg)$ {
+        expires 7d;
+        add_header Cache-Control "public";
+        try_files $uri =404;
+    }
+
+    # --- Запасной путь к API, если у поставщика закрыт CORS ---
+    #
+    # Проксируются ровно пять известных путей, не всё подряд: иначе
+    # получился бы открытый релей, которым воспользуется кто угодно.
+    # Cookie нашего домена в сторону поставщика не уходят.
+    #
+    # ВАЖНО: через этот блок проходят данные аккаунта клиента. Не включайте
+    # здесь логирование тела запроса и не ставьте кэширование.
+    location ~ ^/redeem-api/(check|activate|service_status|claude_refresh|refresh-subscription)$ {
+        limit_req zone=redeemapi burst=10 nodelay;
+        limit_except GET POST { deny all; }
+
+        rewrite ^/redeem-api/(.*)$ /api/$1 break;
+        proxy_pass https://redeemgpt.com;        # ← адрес нового поставщика
+
+        proxy_http_version 1.1;
+        proxy_set_header Host redeemgpt.com;     # ← и здесь тоже
+        proxy_set_header Cookie "";
+        proxy_set_header Accept-Encoding "";
+        proxy_ssl_server_name on;
+        proxy_connect_timeout 10s;
+        proxy_read_timeout 120s;                 # активация бывает долгой (~80 с)
+        proxy_buffering off;
+
+        add_header Cache-Control "no-store" always;
+        proxy_pass_header X-Request-ID;
+    }
+}
+
+# --- В блоке server { } основного домена payoplata.ru ---
+#
+# Старые ссылки /redeem/... уводим на поддомен настоящим 301, сохраняя
+# ?code=. В out/redeem/ лежат ещё и HTML-заглушки с тем же переходом —
+# они работают без nginx (например, на GitHub Pages), но 301 лучше:
+# поисковики склеят адреса, а клиент не увидит промежуточную страницу.
+#
+#     location ^~ /redeem/ {
+#         return 301 https://redeem.payoplata.ru$request_uri;
+#     }
+#
+# Внимание: этот location должен идти ДО общего `location /` с try_files,
+# иначе сработает раздача статики и 301 не случится.
+
+# Проверка после подключения:
+#   curl -I https://redeem.payoplata.ru/claude/                  → 200
+#   curl -I https://payoplata.ru/redeem/claude/?code=TEST        → 301 на поддомен
+#   curl -s  https://redeem.payoplata.ru/api-config.js           → адрес поставщика
+#   curl -sS "https://redeem.payoplata.ru/redeem-api/check?cdkey=TEST" | head -c 200
+#     → JSON поставщика (скорее всего cdk.not_found), а не 404 nginx

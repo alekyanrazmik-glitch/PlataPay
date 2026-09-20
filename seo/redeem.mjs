@@ -30,6 +30,8 @@ import {
   escapeAttr,
   faqDetails,
   CONTACTS,
+  APP_CSS,
+  APP_JS,
 } from './app-shell.mjs';
 
 // Прямой вызов API поставщика. Если у него закрыт CORS — клиент
@@ -561,7 +563,7 @@ function rowsOf(d){
 // ------------------------------------------------------------ шаг 1: код
 var SLUG={gpt:'chatgpt',claude:'claude',claude_s:'claude',grok:'grok'};
 var LABEL={gpt:'ChatGPT',claude:'Claude',claude_s:'Claude',grok:'Grok'};
-var BASE=body.getAttribute('data-base')||'/';
+var SELF=body.getAttribute('data-self')||'/';
 var cdTimer=0;
 
 function cooldown(sec,d){
@@ -594,7 +596,7 @@ function toStep2(d){
     var slug=SLUG[S.app];
     err1('Это код '+(LABEL[S.app]||'другого сервиса')+'. '+(slug?'Откройте страницу активации '+LABEL[S.app]+' — ссылка ниже.':'Напишите нам, активируем вручную.'));
     if(slug){
-      var a=el('div','rd-actions','<a class="pp-btn" href="'+BASE+'redeem/'+slug+'/?code='+encodeURIComponent(S.code)+'">Перейти к активации '+esc(LABEL[S.app])+'</a>');
+      var a=el('div','rd-actions','<a class="pp-btn" href="'+SELF+slug+'/?code='+encodeURIComponent(S.code)+'">Перейти к активации '+esc(LABEL[S.app])+'</a>');
       elErr1.appendChild(a);
     }
     return;
@@ -738,7 +740,7 @@ function initStatus(){
       if(d.in_cooldown&&d.cooldown_remaining)rows.push(['Повтор через',Math.ceil(d.cooldown_remaining/60)+' мин']);
       var extra='';
       if(d.use_status===0&&SLUG[d.app])
-        extra='<div class="rd-actions"><a class="pp-btn" href="'+BASE+'redeem/'+SLUG[d.app]+'/?code='+encodeURIComponent(code)+'">Активировать код</a></div>';
+        extra='<div class="rd-actions"><a class="pp-btn" href="'+SELF+SLUG[d.app]+'/?code='+encodeURIComponent(code)+'">Активировать код</a></div>';
       result(kind,n,rows,extra);
     });
   }
@@ -871,8 +873,32 @@ function flowCards({ codeHint }) {
 
 const SAFE_NOTE = `<div class="rd-safe"><b>Данные аккаунта не попадают в PlataPay.</b> Страница отправляет их из вашего браузера напрямую в сервис активации — мы их не получаем, не логируем и не храним. После активации ключ сессии можно обнулить, выйдя из всех устройств в настройках сервиса.</div>`;
 
-function helpBlock(base) {
-  return `<div class="rd-help">Что-то пошло не так или непонятно — напишите нам в <a href="${CONTACTS.telegram}" target="_blank" rel="noopener">Telegram</a> или <a href="${CONTACTS.whatsapp}" target="_blank" rel="noopener">WhatsApp</a>, поможем вручную. Если код уже активирован, а подписки нет — откройте <a href="${base}redeem/restore/">восстановление подписки</a>. Просто посмотреть состояние кода можно на странице <a href="${base}redeem/status/">проверки статуса</a>.</div>`;
+// ---------------------------------------------------------------- адреса
+//
+// Страницы активации живут на отдельном поддомене redeem.payoplata.ru,
+// но остаются частью сайта: шапка, футер и логотип ведут на основной
+// домен. Поэтому адресов три, и их нельзя смешивать:
+//
+//   base   — корень основного сайта (каталог, статьи, контакты)
+//   self   — корень сайта активации (ссылки между своими же страницами)
+//   asset  — откуда грузятся css/js/favicon
+//   origin — абсолютный корень для canonical и sitemap
+//
+// mode 'site' — поддомен; mode 'path' оставлен для сборки тех же страниц
+// внутри основного домена (используется для страниц-перенаправлений).
+
+export const REDEEM_HOST = process.env.REDEEM_HOST || 'redeem.payoplata.ru';
+export const MAIN_SITE = 'https://payoplata.ru/';
+
+export function redeemCtx({ mode = 'site', base = MAIN_SITE } = {}) {
+  if (mode === 'site') {
+    return { mode, base, self: '/', asset: '/', origin: `https://${REDEEM_HOST}/` };
+  }
+  return { mode, base, self: `${base}redeem/`, asset: base, origin: 'https://payoplata.ru/redeem/' };
+}
+
+function helpBlock(c) {
+  return `<div class="rd-help">Что-то пошло не так или непонятно — напишите нам в <a href="${CONTACTS.telegram}" target="_blank" rel="noopener">Telegram</a> или <a href="${CONTACTS.whatsapp}" target="_blank" rel="noopener">WhatsApp</a>, поможем вручную. Если код уже активирован, а подписки нет — откройте <a href="${c.self}restore/">восстановление подписки</a>. Просто посмотреть состояние кода можно на странице <a href="${c.self}status/">проверки статуса</a>.</div>`;
 }
 
 function howtoBlock(p) {
@@ -905,23 +931,52 @@ function faqLd(list) {
   })}</script>`;
 }
 
-// Общая «голова» страницы: подключение стилей и скрипта активации плюс
-// адреса API. Вынесены в window, чтобы адрес можно было поменять без
-// пересборки — например, подставив свой прокси.
-function redeemHead(base) {
-  return `<link rel="stylesheet" href="${base}css/pp-redeem.css">
+// Подключение стилей и скрипта активации плюс адреса API. Вынесены в
+// window, чтобы адрес можно было поменять без пересборки.
+function redeemHead(c) {
+  // Порядок важен: сначала значения по умолчанию, зашитые на сборке,
+  // затем api-config.js, который их перекрывает. Обычный (не defer)
+  // скрипт в <head> выполняется раньше отложенного pp-redeem.js, так что
+  // к моменту запуска адрес уже окончательный. Если файла нет или он не
+  // загрузился — останутся значения по умолчанию, страница не сломается.
+  return `<link rel="stylesheet" href="${c.asset}css/pp-redeem.css">
 <script>window.PP_REDEEM_API=${JSON.stringify(REDEEM_API)};window.PP_REDEEM_API_FALLBACK=${JSON.stringify(REDEEM_API_FALLBACK)};</script>
-<script src="${base}js/pp-redeem.js" defer></script>`;
+<script src="${c.asset}api-config.js"></script>
+<script src="${c.asset}js/pp-redeem.js" defer></script>`;
 }
 
-function bodyAttrs(kind, apps, base) {
-  return ` data-rd="${kind}" data-apps="${escapeAttr(apps.join(','))}" data-base="${escapeAttr(base)}" data-tg="${escapeAttr(CONTACTS.telegram)}"`;
+// Единственное место, где живёт адрес поставщика после выкладки. Менять
+// поставщика — править этот файл на сервере и обновить страницу: пересборка
+// и передеплой не нужны.
+export function apiConfigJs() {
+  return `// Адрес API активации. Меняется прямо здесь, на сервере —
+// пересобирать сайт не нужно, достаточно обновить страницу.
+//
+//   PP_REDEEM_API          — основной адрес, куда идут запросы
+//   PP_REDEEM_API_FALLBACK — запасной, на него скрипт переключается сам,
+//                            если браузер заблокировал прямой вызов (CORS).
+//                            Это прокси на своём домене, см.
+//                            server/vps/nginx-redeem-site.conf.example
+//
+// После правки: nginx отдаёт файл с Cache-Control: no-cache, так что
+// достаточно обычной перезагрузки страницы (Ctrl+F5 не требуется).
+
+window.PP_REDEEM_API = ${JSON.stringify(REDEEM_API)};
+window.PP_REDEEM_API_FALLBACK = ${JSON.stringify(REDEEM_API_FALLBACK)};
+`;
+}
+
+function bodyAttrs(kind, apps, c) {
+  return ` data-rd="${kind}" data-apps="${escapeAttr(apps.join(','))}" data-self="${escapeAttr(c.self)}" data-tg="${escapeAttr(CONTACTS.telegram)}"`;
 }
 
 // ------------------------------------------------------------- страницы
 const HUB_GRAD = 'linear-gradient(150deg,#4B8CFF 0%,#1B4FD8 100%)';
 const KEY_ICON =
   '<svg viewBox="0 0 24 24" width="28" height="28" fill="none" aria-hidden="true"><path d="M14.5 3.5a6 6 0 1 0-4.2 10.3L4 20.1V22h3.2l1.3-1.3v-1.6h1.6l1.3-1.3v-1.6h1.6l.9-.9A6 6 0 0 0 14.5 3.5zm1.6 4.6a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z" stroke="#8FB4FF" stroke-width="1.5" stroke-linejoin="round"/></svg>';
+
+const CODE_HINT =
+  'Вставьте код целиком, вместе с дефисами. Разные партии выглядят по-разному — ничего дописывать, разбивать или менять регистр не нужно.';
 
 function heroBlock({ grad, tile, h1, sub, plans }) {
   return `<section class="rd-hero">
@@ -935,13 +990,28 @@ ${plans ? `<span class="plans">${escapeHtml(plans)}</span>` : ''}
 </section>`;
 }
 
-const CODE_HINT =
-  'Вставьте код целиком, вместе с дефисами. Разные партии выглядят по-разному — ничего дописывать, разбивать или менять регистр не нужно.';
+// Общие параметры wrapPage для всех страниц активации.
+function shell(c, { canonical, title, description, verifyTags, ld, body, kind, apps }) {
+  return wrapPage({
+    base: c.base,
+    assetBase: c.asset,
+    canonical,
+    title,
+    description,
+    verifyTags,
+    ld,
+    cta: { href: `${c.base}catalog/`, label: 'Каталог' },
+    body,
+    extraHead: redeemHead(c),
+    bodyAttrs: bodyAttrs(kind, apps, c),
+    noscriptPixel: true,
+  });
+}
 
 /** Универсальная страница: продукт определяется по самому коду. */
-function renderHub({ base, verifyTags }) {
+function renderHub(c, { verifyTags }) {
   const cards = REDEEM_PAGES.map(
-    (p) => `<a class="rd-prod" href="${base}redeem/${p.slug}/">
+    (p) => `<a class="rd-prod" href="${c.self}${p.slug}/">
 <div class="veil" style="background:${p.grad}"></div>
 <span class="tile">${p.tile}</span>
 <b>${escapeHtml(p.name)}</b><span>${escapeHtml(p.plans)}</span>
@@ -949,7 +1019,7 @@ function renderHub({ base, verifyTags }) {
   ).join('');
 
   const body = `<div class="rd-wrap">
-${breadcrumbs([{ name: 'Главная', href: base }, { name: 'Активация кода' }])}
+${breadcrumbs([{ name: 'PlataPay', href: c.base }, { name: 'Активация кода' }])}
 ${heroBlock({
     grad: HUB_GRAD,
     tile: KEY_ICON,
@@ -966,37 +1036,34 @@ ${stepsBar()}
 ${flowCards({ codeHint: CODE_HINT })}
 ${SAFE_NOTE}
 ${faqBlock(COMMON_FAQ)}
-${helpBlock(base)}
+${helpBlock(c)}
 </div>`;
 
-  return wrapPage({
-    base,
-    canonical: 'https://payoplata.ru/redeem/',
+  return shell(c, {
+    canonical: c.origin,
     title: 'Активация кода — ChatGPT, Claude, Grok · PlataPay',
     description:
       'Активация кода подписки на ваш аккаунт: ChatGPT, Claude и Grok. Введите код — сервис определится автоматически. Проверка статуса и восстановление подписки.',
     verifyTags,
     ld:
       breadcrumbLd([
-        { name: 'Главная', item: 'https://payoplata.ru/' },
-        { name: 'Активация кода', item: 'https://payoplata.ru/redeem/' },
+        { name: 'PlataPay', item: MAIN_SITE },
+        { name: 'Активация кода', item: c.origin },
       ]) + faqLd(COMMON_FAQ),
-    cta: { href: `${base}catalog/`, label: 'Каталог' },
     body,
-    extraHead: redeemHead(base),
-    bodyAttrs: bodyAttrs('redeem', [], base),
-    noscriptPixel: true,
+    kind: 'redeem',
+    apps: [],
   });
 }
 
 /** Страница одного продукта: код чужого сервиса отсюда перенаправляется. */
-function renderProduct(p, { base, verifyTags }) {
+function renderProduct(p, c, { verifyTags }) {
   const faq = p.faq.concat(COMMON_FAQ);
-  const url = `https://payoplata.ru/redeem/${p.slug}/`;
+  const url = `${c.origin}${p.slug}/`;
   const body = `<div class="rd-wrap">
 ${breadcrumbs([
-    { name: 'Главная', href: base },
-    { name: 'Активация кода', href: `${base}redeem/` },
+    { name: 'PlataPay', href: c.base },
+    { name: 'Активация кода', href: c.self },
     { name: p.name },
   ])}
 ${heroBlock({ grad: p.grad, tile: p.tile, h1: p.h1, sub: p.sub, plans: p.plans })}
@@ -1005,35 +1072,32 @@ ${flowCards({ codeHint: CODE_HINT })}
 ${SAFE_NOTE}
 ${howtoBlock(p)}
 ${faqBlock(faq)}
-${helpBlock(base)}
+${helpBlock(c)}
 </div>`;
 
-  return wrapPage({
-    base,
+  return shell(c, {
     canonical: url,
     title: `${p.h1} — PlataPay`,
     description: p.desc,
     verifyTags,
     ld:
       breadcrumbLd([
-        { name: 'Главная', item: 'https://payoplata.ru/' },
-        { name: 'Активация кода', item: 'https://payoplata.ru/redeem/' },
+        { name: 'PlataPay', item: MAIN_SITE },
+        { name: 'Активация кода', item: c.origin },
         { name: p.name, item: url },
       ]) + faqLd(faq),
-    cta: { href: `${base}catalog/`, label: 'Каталог' },
     body,
-    extraHead: redeemHead(base),
-    bodyAttrs: bodyAttrs('redeem', p.apps, base),
-    noscriptPixel: true,
+    kind: 'redeem',
+    apps: p.apps,
   });
 }
 
 /** Проверка статуса кода без активации. */
-function renderStatus({ base, verifyTags }) {
+function renderStatus(c, { verifyTags }) {
   const body = `<div class="rd-wrap">
 ${breadcrumbs([
-    { name: 'Главная', href: base },
-    { name: 'Активация кода', href: `${base}redeem/` },
+    { name: 'PlataPay', href: c.base },
+    { name: 'Активация кода', href: c.self },
     { name: 'Статус кода' },
   ])}
 ${heroBlock({
@@ -1056,34 +1120,32 @@ ${heroBlock({
 <button type="button" class="pp-btn" id="rd-go1">Проверить статус</button>
 </section>
 <div class="rd-res" id="rd-res" hidden></div>
-${helpBlock(base)}
+${helpBlock(c)}
 </div>`;
 
-  return wrapPage({
-    base,
-    canonical: 'https://payoplata.ru/redeem/status/',
+  return shell(c, {
+    canonical: `${c.origin}status/`,
     title: 'Проверка статуса кода активации — PlataPay',
     description:
       'Проверьте статус кода активации подписки: ожидает активации, в обработке или уже активирован, на какой аккаунт и когда.',
     verifyTags,
     ld: breadcrumbLd([
-      { name: 'Главная', item: 'https://payoplata.ru/' },
-      { name: 'Активация кода', item: 'https://payoplata.ru/redeem/' },
-      { name: 'Статус кода', item: 'https://payoplata.ru/redeem/status/' },
+      { name: 'PlataPay', item: MAIN_SITE },
+      { name: 'Активация кода', item: c.origin },
+      { name: 'Статус кода', item: `${c.origin}status/` },
     ]),
-    cta: { href: `${base}redeem/`, label: 'Активировать' },
     body,
-    extraHead: redeemHead(base),
-    bodyAttrs: bodyAttrs('status', [], base),
+    kind: 'status',
+    apps: [],
   });
 }
 
 /** Подписка не пришла: повторная привязка Claude и проверка тарифа ChatGPT. */
-function renderRestore({ base, verifyTags }) {
+function renderRestore(c, { verifyTags }) {
   const body = `<div class="rd-wrap">
 ${breadcrumbs([
-    { name: 'Главная', href: base },
-    { name: 'Активация кода', href: `${base}redeem/` },
+    { name: 'PlataPay', href: c.base },
+    { name: 'Активация кода', href: c.self },
     { name: 'Подписка не пришла' },
   ])}
 ${heroBlock({
@@ -1135,55 +1197,121 @@ ${heroBlock({
 </section>
 <div class="rd-res" id="rd-res" hidden></div>
 ${SAFE_NOTE}
-${helpBlock(base)}
+${helpBlock(c)}
 </div>`;
 
-  return wrapPage({
-    base,
-    canonical: 'https://payoplata.ru/redeem/restore/',
+  return shell(c, {
+    canonical: `${c.origin}restore/`,
     title: 'Подписка не пришла после активации — что делать · PlataPay',
     description:
       'Код активирован, а подписки в аккаунте нет: повторная привязка подписки Claude по ключу сессии и проверка текущего тарифа ChatGPT.',
     verifyTags,
     ld: breadcrumbLd([
-      { name: 'Главная', item: 'https://payoplata.ru/' },
-      { name: 'Активация кода', item: 'https://payoplata.ru/redeem/' },
-      { name: 'Подписка не пришла', item: 'https://payoplata.ru/redeem/restore/' },
+      { name: 'PlataPay', item: MAIN_SITE },
+      { name: 'Активация кода', item: c.origin },
+      { name: 'Подписка не пришла', item: `${c.origin}restore/` },
     ]),
-    cta: { href: `${base}redeem/`, label: 'Активировать' },
     body,
-    extraHead: redeemHead(base),
-    bodyAttrs: bodyAttrs('restore', [], base),
+    kind: 'restore',
+    apps: [],
   });
 }
 
 // ------------------------------------------------------------- генерация
-/**
- * Пишет страницы активации и общие ассеты. Возвращает список URL для
- * sitemap: служебные /redeem/status/ и /redeem/restore/ в него не идут —
- * это инструменты, а не посадочные страницы.
- */
-export function generateRedeem({ out, base, verifyTags = '' }) {
-  const page = (dir, html) => {
-    const d = path.join(out, ...dir);
-    fs.mkdirSync(d, { recursive: true });
-    fs.writeFileSync(path.join(d, 'index.html'), html);
-  };
+const SITE_PAGES = [
+  { dir: [], render: (c, o) => renderHub(c, o), loc: '' },
+  ...REDEEM_PAGES.map((p) => ({ dir: [p.slug], render: (c, o) => renderProduct(p, c, o), loc: `${p.slug}/` })),
+  { dir: ['status'], render: (c, o) => renderStatus(c, o), loc: 'status/' },
+  { dir: ['restore'], render: (c, o) => renderRestore(c, o), loc: 'restore/' },
+];
 
-  fs.mkdirSync(path.join(out, 'css'), { recursive: true });
-  fs.mkdirSync(path.join(out, 'js'), { recursive: true });
+/**
+ * Собирает самостоятельный сайт активации для redeem.payoplata.ru.
+ * Это отдельный корень: свои ассеты, свой CNAME, свой sitemap. Шапка,
+ * футер и логотип при этом ведут на основной домен — для посетителя это
+ * один и тот же PlataPay.
+ */
+export function generateRedeemSite({ out, verifyTags = '', faviconSrc = '', host = REDEEM_HOST }) {
+  const c = redeemCtx({ mode: 'site' });
+  const today = new Date().toISOString().slice(0, 10);
+
+  for (const d of ['css', 'js']) fs.mkdirSync(path.join(out, d), { recursive: true });
+
+  // Ассеты кладём рядом, а не ссылаемся на основной домен: поддомен
+  // должен открываться, даже если с основным что-то не так.
+  fs.writeFileSync(path.join(out, 'css', 'pp-app.css'), APP_CSS);
+  fs.writeFileSync(path.join(out, 'js', 'pp-app.js'), APP_JS);
   fs.writeFileSync(path.join(out, 'css', 'pp-redeem.css'), REDEEM_CSS);
   fs.writeFileSync(path.join(out, 'js', 'pp-redeem.js'), REDEEM_JS);
+  if (faviconSrc && fs.existsSync(faviconSrc)) fs.copyFileSync(faviconSrc, path.join(out, 'favicon.svg'));
 
-  page(['redeem'], renderHub({ base, verifyTags }));
-  for (const p of REDEEM_PAGES) page(['redeem', p.slug], renderProduct(p, { base, verifyTags }));
-  page(['redeem', 'status'], renderStatus({ base, verifyTags }));
-  page(['redeem', 'restore'], renderRestore({ base, verifyTags }));
+  // Адрес API — отдельным файлом, а не только зашитым в страницы:
+  // поставщик меняется чаще, чем вёрстка.
+  fs.writeFileSync(path.join(out, 'api-config.js'), apiConfigJs());
 
-  const urls = [
-    'https://payoplata.ru/redeem/',
-    ...REDEEM_PAGES.map((p) => `https://payoplata.ru/redeem/${p.slug}/`),
+  for (const p of SITE_PAGES) {
+    const dir = path.join(out, ...p.dir);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'index.html'), p.render(c, { verifyTags }));
+  }
+
+  fs.writeFileSync(path.join(out, 'CNAME'), `${host}\n`);
+  fs.writeFileSync(path.join(out, '.nojekyll'), '');
+  fs.writeFileSync(
+    path.join(out, 'robots.txt'),
+    `User-agent: *\nAllow: /\n\nSitemap: https://${host}/sitemap.xml\n`,
+  );
+  fs.writeFileSync(
+    path.join(out, 'sitemap.xml'),
+    `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${SITE_PAGES.map(
+  (p) =>
+    `<url><loc>https://${host}/${p.loc}</loc><lastmod>${today}</lastmod><changefreq>weekly</changefreq><priority>${p.loc ? '0.7' : '1.0'}</priority></url>`,
+).join('\n')}
+</urlset>
+`,
+  );
+
+  console.log(`built redeem site: ${SITE_PAGES.length} pages → ${host}, api = ${REDEEM_API}`);
+  return SITE_PAGES.map((p) => `https://${host}/${p.loc}`);
+}
+
+/**
+ * Заглушки на основном домене: /redeem/* уводят на поддомен, сохраняя
+ * ?code=. Нужны, чтобы не побить ссылки, которые уже ушли клиентам, и
+ * чтобы поиск склеил старые адреса с новыми через canonical.
+ *
+ * На VPS лучше настроить настоящий 301 (см. nginx-redeem-site.conf.example) —
+ * эти файлы остаются запасным вариантом и работают на любом хостинге.
+ */
+export function generateRedeemRedirects({ out, host = REDEEM_HOST }) {
+  const stub = (target, label) => `<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${escapeHtml(label)} — PlataPay</title>
+<link rel="canonical" href="${target}">
+<meta http-equiv="refresh" content="0;url=${escapeAttr(target)}">
+<meta name="robots" content="noindex,follow">
+<style>:root{color-scheme:dark}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#091b36;color:#eef3ff;font-family:-apple-system,'Segoe UI',system-ui,sans-serif;text-align:center;padding:24px}a{color:#6fa8ff}</style>
+<script>location.replace(${JSON.stringify(target)}+location.search+location.hash);</script>
+</head>
+<body><div><p>Активация переехала на <b>${escapeHtml(host)}</b></p>
+<p><a href="${escapeAttr(target)}">Перейти к активации →</a></p></div></body>
+</html>
+`;
+  const pages = [
+    { dir: [], loc: '', label: 'Активация кода' },
+    ...REDEEM_PAGES.map((p) => ({ dir: [p.slug], loc: `${p.slug}/`, label: `Активация кода ${p.name}` })),
+    { dir: ['status'], loc: 'status/', label: 'Статус кода' },
+    { dir: ['restore'], loc: 'restore/', label: 'Подписка не пришла' },
   ];
-  console.log(`built redeem: ${REDEEM_PAGES.length + 3} pages, api = ${REDEEM_API}`);
-  return urls;
+  for (const p of pages) {
+    const dir = path.join(out, 'redeem', ...p.dir);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'index.html'), stub(`https://${host}/${p.loc}`, p.label));
+  }
+  console.log(`built redeem redirects: /redeem/* → ${host}`);
 }
